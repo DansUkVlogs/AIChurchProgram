@@ -128,70 +128,70 @@ export function exportToPDF(programData, isThirdSunday) {
             // Camera with circle shape - perfectly centered
             const cameraX = 92;
             const cameraY = rowCenterY;
-            const cameraRadius = shapeSize * 1.2; // Slightly larger for better readability
+            const cameraRadius = shapeSize * 1.3; // Larger circle for better readability
             doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
             doc.circle(cameraX, cameraY, cameraRadius, 'F');
             
-            // Camera text - larger font for better readability
+            // Camera text - maximized font size to fill the circle
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
-            let cameraFontSize = Math.max(8, Math.min(fontSize + 2, cameraRadius * 1.8)); // Increased base size
+            let cameraFontSize = Math.min(16, cameraRadius * 2.2); // Start with larger size
             doc.setFontSize(cameraFontSize);
             
-            // Ensure text fits in circle with proper margins
-            while (doc.getTextWidth(item.camera) > cameraRadius * 1.4 && cameraFontSize > 6) {
+            // Maximize font size while ensuring text fits comfortably in circle
+            while (doc.getTextWidth(item.camera) > cameraRadius * 1.6 && cameraFontSize > 7) {
                 cameraFontSize--;
                 doc.setFontSize(cameraFontSize);
             }
             
-            // Center text perfectly in circle
+            // Center text perfectly in circle with proper vertical alignment
             const cameraTextWidth = doc.getTextWidth(item.camera);
-            doc.text(item.camera, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.3));
+            doc.text(item.camera, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.25));
             
             // Scene with rectangle shape - perfectly centered
             const sceneX = 115;
-            const sceneY = rowCenterY - (shapeSize * 1.1);
-            const sceneWidth = shapeSize * 3.2; // Slightly wider
-            const sceneHeight = shapeSize * 2.2; // Taller for better text
+            const sceneY = rowCenterY - (shapeSize * 1.2);
+            const sceneWidth = shapeSize * 3.5; // Larger for better text space
+            const sceneHeight = shapeSize * 2.4; // Taller for better text
             doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
             doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
             
-            // Scene text - larger font for better readability
+            // Scene text - maximized font size to fill the rectangle
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
-            let sceneFontSize = Math.max(8, Math.min(fontSize + 2, shapeSize * 1.8)); // Increased base size
+            let sceneFontSize = Math.min(16, shapeSize * 2.2); // Start with larger size
             doc.setFontSize(sceneFontSize);
             
-            // Ensure text fits in rectangle with proper margins
-            while (doc.getTextWidth(item.scene) > sceneWidth - 4 && sceneFontSize > 6) {
+            // Maximize font size while ensuring text fits comfortably in rectangle
+            while (doc.getTextWidth(item.scene) > sceneWidth - 6 && sceneFontSize > 7) {
                 sceneFontSize--;
                 doc.setFontSize(sceneFontSize);
             }
             
-            // Center text perfectly in rectangle
+            // Center text perfectly in rectangle with better vertical alignment
             const sceneTextWidth = doc.getTextWidth(item.scene);
             doc.text(item.scene, 
                 sceneX + (sceneWidth / 2) - (sceneTextWidth / 2), 
-                sceneY + (sceneHeight / 2) + (sceneFontSize * 0.3)
+                sceneY + (sceneHeight / 2) + (sceneFontSize * 0.35)
             );
             
             // Mic with rounded rectangle shape (instead of triangle) - perfectly centered
             const micX = 140;
-            const micY = rowCenterY - (shapeSize * 1.1);
-            const micWidth = shapeSize * 3.5; // Wider for better text space
-            const micHeight = shapeSize * 2.2; // Taller for better text
+            const micY = rowCenterY - (shapeSize * 1.2);
+            const micWidth = shapeSize * 3.8; // Wider for better text space
+            const micHeight = shapeSize * 2.4; // Taller for better text
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
-            doc.roundedRect(micX, micY, micWidth, micHeight, 1, 1, 'F');
+            doc.roundedRect(micX, micY, micWidth, micHeight, 1.5, 1.5, 'F');
             
-            // Mic text - much larger font for better readability
+            // Mic text - maximized font size for better readability
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
-            let micFontSize = Math.max(7, Math.min(fontSize + 1, shapeSize * 1.6)); // Much larger base size
+            let micFontSize = Math.min(16, shapeSize * 2.0); // Start with larger size
             doc.setFontSize(micFontSize);
             
-            // Split mic text into lines if needed, but with more space now
+            // Split mic text into lines if needed, with more space now
             let micLines = [];
-            const maxMicWidth = micWidth - 4; // Margin inside rectangle
+            const maxMicWidth = micWidth - 6; // Better margin inside rectangle
             
             if (doc.getTextWidth(item.mic) > maxMicWidth) {
                 // Try to split on common delimiters
@@ -210,19 +210,19 @@ export function exportToPDF(programData, isThirdSunday) {
                 micLines = [item.mic];
             }
             
-            // Ensure each line fits
+            // Ensure each line fits and maximize font size
             const micLinesToShow = Math.min(2, micLines.length);
             for (let line of micLines.slice(0, micLinesToShow)) {
-                while (doc.getTextWidth(line) > maxMicWidth && micFontSize > 5) {
+                while (doc.getTextWidth(line) > maxMicWidth && micFontSize > 6) {
                     micFontSize--;
                     doc.setFontSize(micFontSize);
                 }
             }
             
-            // Center text perfectly in rectangle
-            const lineSpacing = micFontSize * 1.1;
+            // Center text perfectly in rectangle with improved spacing
+            const lineSpacing = micFontSize * 1.15;
             const totalHeight = micLinesToShow * lineSpacing;
-            const startY = micY + (micHeight / 2) - (totalHeight / 2) + lineSpacing;
+            const startY = micY + (micHeight / 2) - (totalHeight / 2) + (lineSpacing * 0.8);
             
             for (let i = 0; i < micLinesToShow; i++) {
                 const line = micLines[i];
@@ -233,29 +233,37 @@ export function exportToPDF(programData, isThirdSunday) {
             // Notes with rounded rectangle (if exists) - perfectly centered
             if (item.notes && item.notes.trim()) {
                 const notesX = 162;
-                const notesY = rowCenterY - (shapeSize * 1.1);
-                const maxNotesWidth = 26;
+                const notesY = rowCenterY - (shapeSize * 1.2);
+                const maxNotesWidth = 28; // Wider for better text space
                 
-                // Notes text - larger font for better readability
+                // Notes text - maximized font size for better readability
                 doc.setTextColor(0, 0, 0);
                 doc.setFont(undefined, 'normal');
-                let notesFontSize = Math.max(7, Math.min(fontSize + 1, shapeSize * 1.4)); // Larger base size
+                let notesFontSize = Math.min(14, shapeSize * 1.8); // Start with larger size
                 doc.setFontSize(notesFontSize);
                 
                 // Split notes into lines if needed
-                const notesLines = doc.splitTextToSize(item.notes, maxNotesWidth - 3);
+                const notesLines = doc.splitTextToSize(item.notes, maxNotesWidth - 4);
                 const notesLinesToShow = Math.min(2, notesLines.length);
                 
+                // Ensure each line fits and maximize font size
+                for (let line of notesLines.slice(0, notesLinesToShow)) {
+                    while (doc.getTextWidth(line) > maxNotesWidth - 4 && notesFontSize > 7) {
+                        notesFontSize--;
+                        doc.setFontSize(notesFontSize);
+                    }
+                }
+                
                 // Calculate optimal height for notes box
-                const lineHeight = notesFontSize * 1.2;
-                const notesHeight = Math.max(shapeSize * 2.2, notesLinesToShow * lineHeight + 4);
+                const lineHeight = notesFontSize * 1.25;
+                const notesHeight = Math.max(shapeSize * 2.4, notesLinesToShow * lineHeight + 6);
                 
                 doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
-                doc.roundedRect(notesX, notesY, maxNotesWidth, notesHeight, 1, 1, 'F');
+                doc.roundedRect(notesX, notesY, maxNotesWidth, notesHeight, 1.5, 1.5, 'F');
                 
-                // Center text perfectly in notes box
+                // Center text perfectly in notes box with improved spacing
                 const totalTextHeight = notesLinesToShow * lineHeight;
-                const textStartY = notesY + (notesHeight / 2) - (totalTextHeight / 2) + lineHeight;
+                const textStartY = notesY + (notesHeight / 2) - (totalTextHeight / 2) + (lineHeight * 0.8);
                 
                 for (let i = 0; i < notesLinesToShow; i++) {
                     const line = notesLines[i];
