@@ -405,10 +405,10 @@ export function toggleTile(tileElement, field, index) {
     const value = tileElement.dataset.value;
     
     if (field === 'camera') {
-        // For camera, allow multiple selection (like "2/1")
+        // For camera, allow multiple selection (like "2/1") with order preservation
         handleCameraTileToggle(tileElement, container, hiddenInput, value);
     } else if (field === 'scene') {
-        // For scene, only single selection
+        // For scene, allow multiple selection (like "2/1") with order preservation
         handleSceneTileToggle(tileElement, container, hiddenInput, value);
     }
 }
@@ -418,11 +418,11 @@ function handleCameraTileToggle(tileElement, container, hiddenInput, value) {
     const currentValue = hiddenInput.value;
     
     if (isSelected) {
-        // Remove this value
+        // Remove this value while preserving order of remaining values
         tileElement.classList.remove('selected');
         
         if (currentValue.includes('/')) {
-            // Handle combined values like "2/1"
+            // Handle combined values like "2/1" - preserve order of remaining
             const parts = currentValue.split('/');
             const remaining = parts.filter(part => part !== value);
             hiddenInput.value = remaining.length > 0 ? remaining.join('/') : '';
@@ -430,13 +430,13 @@ function handleCameraTileToggle(tileElement, container, hiddenInput, value) {
             hiddenInput.value = currentValue === value ? '' : currentValue;
         }
     } else {
-        // Add this value
+        // Add this value in the order selected
         tileElement.classList.add('selected');
         
         if (currentValue && currentValue !== value) {
-            // Combine values (e.g., "2" + "1" = "2/1")
-            const values = [currentValue, value].sort().join('/');
-            hiddenInput.value = values;
+            // Append new value to existing (preserve selection order)
+            // If "2" is selected first, then "1" selected, result is "2/1"
+            hiddenInput.value = currentValue + '/' + value;
         } else {
             hiddenInput.value = value;
         }
@@ -448,19 +448,35 @@ function handleCameraTileToggle(tileElement, container, hiddenInput, value) {
 
 function handleSceneTileToggle(tileElement, container, hiddenInput, value) {
     const isSelected = tileElement.classList.contains('selected');
+    const currentValue = hiddenInput.value;
     
     if (isSelected) {
-        // Deselect
+        // Remove this value while preserving order of remaining values
         tileElement.classList.remove('selected');
-        hiddenInput.value = '';
+        
+        if (currentValue.includes('/')) {
+            // Handle combined values like "2/1" - preserve order of remaining
+            const parts = currentValue.split('/');
+            const remaining = parts.filter(part => part !== value);
+            hiddenInput.value = remaining.length > 0 ? remaining.join('/') : '';
+        } else {
+            hiddenInput.value = currentValue === value ? '' : currentValue;
+        }
     } else {
-        // Select this one and deselect others
-        container.querySelectorAll('.selection-tile').forEach(tile => {
-            tile.classList.remove('selected');
-        });
+        // Add this value in the order selected
         tileElement.classList.add('selected');
-        hiddenInput.value = value;
+        
+        if (currentValue && currentValue !== value) {
+            // Append new value to existing (preserve selection order)
+            // If "2" is selected first, then "1" selected, result is "2/1"
+            hiddenInput.value = currentValue + '/' + value;
+        } else {
+            hiddenInput.value = value;
+        }
     }
+    
+    // Update visual state of all tiles
+    updateTileStates(container, hiddenInput.value);
 }
 
 function updateTileStates(container, currentValue) {
@@ -479,14 +495,24 @@ function updateTileStates(container, currentValue) {
 // Toggle tile selection in row edit modal
 export function toggleRowTile(tileElement, field) {
     const container = tileElement.parentElement;
-    const hiddenInput = document.getElementById(`editRow${field.charAt(0).toUpperCase() + field.slice(1)}`);
     const value = tileElement.dataset.value;
     
+    // Determine if this is for editing existing row or adding new row
+    let hiddenInput = document.getElementById(`editRow${field.charAt(0).toUpperCase() + field.slice(1)}`);
+    if (!hiddenInput) {
+        hiddenInput = document.getElementById(`newRow${field.charAt(0).toUpperCase() + field.slice(1)}`);
+    }
+    
+    if (!hiddenInput) {
+        console.error('Could not find hidden input for field:', field);
+        return;
+    }
+    
     if (field === 'camera') {
-        // For camera, allow multiple selection (like "2/1")
+        // For camera, allow multiple selection (like "2/1") with order preservation
         handleCameraTileToggle(tileElement, container, hiddenInput, value);
     } else if (field === 'scene') {
-        // For scene, only single selection
+        // For scene, allow multiple selection (like "2/1") with order preservation
         handleSceneTileToggle(tileElement, container, hiddenInput, value);
     }
 }
