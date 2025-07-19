@@ -17,64 +17,233 @@ export function exportToPDF(programData, isThirdSunday) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Add title
-        doc.setFontSize(20);
+        // Define colors for different fields
+        const colors = {
+            camera: { r: 0, g: 123, b: 255 },     // Blue (matches bg-primary)
+            scene: { r: 108, g: 117, b: 125 },    // Gray (matches bg-secondary)  
+            mic: { r: 25, g: 135, b: 84 },        // Green (matches bg-success)
+            notes: { r: 255, g: 193, b: 7 }       // Yellow (matches bg-warning)
+        };
+        
+        // Calculate dynamic sizing based on number of items
+        const itemCount = programData.length;
+        const availableHeight = 240; // Available height for content (reduced to allow more padding)
+        const baseRowHeight = Math.max(14, Math.min(18, availableHeight / (itemCount + 3))); // Larger base height
+        const maxRowHeight = baseRowHeight * 1.2; // Allow for 2-line content
+        const fontSize = Math.max(8, Math.min(11, baseRowHeight * 0.5)); // Larger font size
+        const shapeSize = Math.max(4, Math.min(6, baseRowHeight * 0.3)); // Larger shapes
+        
+        // Add title with styling
+        doc.setFillColor(52, 58, 64); // Dark background
+        doc.rect(0, 0, 210, 25, 'F');
+        doc.setTextColor(255, 255, 255); // White text
+        doc.setFontSize(18);
         doc.setFont(undefined, 'bold');
-        doc.text('Church Program Schedule', 20, 20);
+        doc.text('Church Program Schedule', 20, 16);
         
         // Add date and 3rd Sunday info
-        doc.setFontSize(12);
+        doc.setFontSize(10);
         doc.setFont(undefined, 'normal');
         const date = formatDate();
-        doc.text(`Generated: ${date}`, 20, 30);
-        doc.text(`3rd Sunday: ${isThirdSunday ? 'Yes' : 'No'}`, 20, 40);
+        doc.text(`Generated: ${date}`, 20, 22);
+        doc.text(`3rd Sunday: ${isThirdSunday ? 'Yes' : 'No'}`, 120, 22);
         
-        // Add table headers
+        // Reset text color for content
+        doc.setTextColor(0, 0, 0);
+        
+        // Add compact legend
+        doc.setFontSize(9);
+        doc.setFont(undefined, 'bold');
+        doc.text('Legend:', 20, 32);
+        
+        // Camera legend (circle)
+        doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
+        doc.circle(35, 33, 2, 'F');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Camera', 40, 35);
+        
+        // Scene legend (rectangle)
+        doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
+        doc.rect(65, 31, 4, 4, 'F');
+        doc.text('Scene', 71, 35);
+        
+        // Mic legend (triangle)
+        doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
+        // Draw triangle for mic legend
+        const legendTriangleX = 95;
+        const legendTriangleY = 33;
+        doc.triangle(legendTriangleX, legendTriangleY - 2, legendTriangleX - 2, legendTriangleY + 2, legendTriangleX + 2, legendTriangleY + 2, 'F');
+        doc.text('Mic', 100, 35);
+        
+        // Notes legend (rounded rectangle)
+        doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
+        doc.roundedRect(125, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Notes', 134, 35);
+        
+        // Add table headers with background
+        const headerY = 44;
+        doc.setFillColor(248, 249, 250); // Light gray background
+        doc.rect(20, headerY, 170, 8, 'F');
+        doc.setTextColor(0, 0, 0);
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
-        doc.text('Program Item', 20, 55);
-        doc.text('Camera', 130, 55);
-        doc.text('Scene', 155, 55);
-        doc.text('Mic', 175, 55);
+        doc.text('Program Item', 22, headerY + 5);
+        doc.text('Camera', 95, headerY + 5);
+        doc.text('Scene', 125, headerY + 5);
+        doc.text('Mic', 150, headerY + 5);
+        doc.text('Notes', 175, headerY + 5);
         
         // Add horizontal line
-        doc.line(20, 58, 190, 58);
+        doc.setLineWidth(0.3);
+        doc.line(20, headerY + 8, 190, headerY + 8);
         
-        // Add data rows
+        // Add data rows with enhanced styling - all on one page
         doc.setFont(undefined, 'normal');
-        let yPosition = 65;
+        doc.setFontSize(fontSize);
+        let yPosition = headerY + 16;
         
         programData.forEach((item, index) => {
-            if (yPosition > 270) {
-                doc.addPage();
-                yPosition = 20;
-                
-                // Re-add headers on new page
-                doc.setFont(undefined, 'bold');
-                doc.text('Program Item', 20, yPosition);
-                doc.text('Camera', 130, yPosition);
-                doc.text('Scene', 155, yPosition);
-                doc.text('Mic', 175, yPosition);
-                doc.line(20, yPosition + 3, 190, yPosition + 3);
-                yPosition += 10;
-                doc.setFont(undefined, 'normal');
+            // Alternate row background
+            if (index % 2 === 0) {
+                doc.setFillColor(252, 252, 252);
+                doc.rect(20, yPosition - 4, 170, maxRowHeight, 'F');
             }
             
-            // Wrap long program items
-            const lines = doc.splitTextToSize(item.programItem, 105);
-            const lineHeight = 5;
+            // Program item text (allow 2 lines if needed)
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(fontSize);
+            const maxItemWidth = 70;
+            const lines = doc.splitTextToSize(item.programItem, maxItemWidth);
+            const linesToShow = Math.min(2, lines.length); // Max 2 lines
             
-            lines.forEach((line, lineIndex) => {
-                doc.text(line, 20, yPosition + (lineIndex * lineHeight));
-            });
+            for (let i = 0; i < linesToShow; i++) {
+                doc.text(lines[i], 22, yPosition + 2 + (i * (fontSize * 0.8)));
+            }
             
-            // Add other columns
-            doc.text(item.camera, 130, yPosition);
-            doc.text(item.scene, 155, yPosition);
-            doc.text(item.mic, 175, yPosition);
+            // Camera with circle shape - ensure text fits
+            const cameraX = 98;
+            const cameraY = yPosition + 3;
+            const cameraRadius = shapeSize;
+            doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
+            doc.circle(cameraX, cameraY, cameraRadius, 'F');
             
-            yPosition += Math.max(lines.length * lineHeight, 7);
+            // Camera text - auto-size to fit in circle
+            doc.setTextColor(255, 255, 255);
+            doc.setFont(undefined, 'bold');
+            let cameraFontSize = fontSize - 1;
+            doc.setFontSize(cameraFontSize);
+            while (doc.getTextWidth(item.camera) > cameraRadius * 1.5 && cameraFontSize > 4) {
+                cameraFontSize--;
+                doc.setFontSize(cameraFontSize);
+            }
+            const cameraTextWidth = doc.getTextWidth(item.camera);
+            doc.text(item.camera, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.3));
+            
+            // Scene with rectangle shape - ensure text fits
+            const sceneX = 125;
+            const sceneY = yPosition;
+            const sceneWidth = shapeSize * 2.5;
+            const sceneHeight = shapeSize * 1.8;
+            doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
+            doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
+            
+            // Scene text - auto-size to fit in rectangle
+            doc.setTextColor(255, 255, 255);
+            doc.setFont(undefined, 'bold');
+            let sceneFontSize = fontSize - 1;
+            doc.setFontSize(sceneFontSize);
+            while (doc.getTextWidth(item.scene) > sceneWidth - 2 && sceneFontSize > 4) {
+                sceneFontSize--;
+                doc.setFontSize(sceneFontSize);
+            }
+            const sceneTextWidth = doc.getTextWidth(item.scene);
+            doc.text(item.scene, sceneX + (sceneWidth / 2) - (sceneTextWidth / 2), sceneY + (sceneHeight / 2) + (sceneFontSize * 0.3));
+            
+            // Mic with triangle shape - ensure text fits
+            const micX = 152;
+            const micY = yPosition + 3;
+            const triangleSize = shapeSize;
+            doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
+            
+            // Draw triangle (pointing up)
+            doc.triangle(
+                micX, micY - triangleSize,           // Top point
+                micX - triangleSize, micY + triangleSize/2,  // Bottom left
+                micX + triangleSize, micY + triangleSize/2,  // Bottom right
+                'F'
+            );
+            
+            // Mic text - auto-size to fit in triangle, split to 2 lines if needed
+            doc.setTextColor(255, 255, 255);
+            doc.setFont(undefined, 'bold');
+            let micFontSize = Math.max(4, fontSize - 3);
+            doc.setFontSize(micFontSize);
+            
+            // Split mic text into lines if it's too long
+            let micLines = [];
+            if (doc.getTextWidth(item.mic) > triangleSize * 1.8) {
+                // Try to split on common delimiters
+                if (item.mic.includes(',')) {
+                    micLines = item.mic.split(',').map(s => s.trim());
+                } else if (item.mic.includes('/')) {
+                    micLines = item.mic.split('/').map(s => s.trim());
+                } else if (item.mic.length > 6) {
+                    // Split long text into 2 lines
+                    const mid = Math.ceil(item.mic.length / 2);
+                    micLines = [item.mic.substring(0, mid), item.mic.substring(mid)];
+                } else {
+                    micLines = [item.mic];
+                }
+            } else {
+                micLines = [item.mic];
+            }
+            
+            // Limit to 2 lines and render
+            const micLinesToShow = Math.min(2, micLines.length);
+            for (let i = 0; i < micLinesToShow; i++) {
+                const line = micLines[i];
+                const lineWidth = doc.getTextWidth(line);
+                doc.text(line, micX - (lineWidth / 2), micY - (micFontSize * 0.5) + (i * micFontSize * 0.8));
+            }
+            
+            // Notes with rounded rectangle (if exists) - ensure text fits
+            if (item.notes && item.notes.trim()) {
+                const notesX = 175;
+                const notesY = yPosition;
+                const maxNotesWidth = 15;
+                
+                // Calculate required width for notes
+                doc.setTextColor(0, 0, 0);
+                doc.setFont(undefined, 'normal');
+                let notesFontSize = fontSize - 2;
+                doc.setFontSize(notesFontSize);
+                
+                // Split notes into lines if needed
+                const notesLines = doc.splitTextToSize(item.notes, maxNotesWidth);
+                const notesLinesToShow = Math.min(2, notesLines.length);
+                const notesHeight = Math.max(shapeSize * 1.5, notesLinesToShow * notesFontSize * 1.2);
+                
+                doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
+                doc.roundedRect(notesX, notesY, maxNotesWidth, notesHeight, 1, 1, 'F');
+                
+                // Render notes text
+                for (let i = 0; i < notesLinesToShow; i++) {
+                    doc.text(notesLines[i], notesX + 1, notesY + (notesFontSize * 1.2) + (i * notesFontSize * 1.1));
+                }
+            }
+            
+            // Reset for next row
+            doc.setTextColor(0, 0, 0);
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(fontSize);
+            yPosition += maxRowHeight;
         });
+        
+        // Add footer
+        doc.setFontSize(7);
+        doc.setTextColor(128, 128, 128);
+        doc.text('Generated by Church Program Smart Assistant', 20, 285);
+        doc.text(`Total Items: ${programData.length}`, 170, 285);
         
         // Save the PDF
         doc.save(CONFIG.PDF_FILENAME);
