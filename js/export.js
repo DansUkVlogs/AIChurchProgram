@@ -67,12 +67,9 @@ export function exportToPDF(programData, isThirdSunday) {
         doc.rect(65, 31, 4, 4, 'F');
         doc.text('Scene', 71, 35);
         
-        // Mic legend (triangle)
+        // Mic legend (rounded rectangle - changed from triangle)
         doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
-        // Draw triangle for mic legend
-        const legendTriangleX = 95;
-        const legendTriangleY = 33;
-        doc.triangle(legendTriangleX, legendTriangleY - 2, legendTriangleX - 2, legendTriangleY + 2, legendTriangleX + 2, legendTriangleY + 2, 'F');
+        doc.roundedRect(92, 31, 6, 4, 0.5, 0.5, 'F');
         doc.text('Mic', 100, 35);
         
         // Notes legend (rounded rectangle)
@@ -88,10 +85,10 @@ export function exportToPDF(programData, isThirdSunday) {
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.text('Program Item', 22, headerY + 5);
-        doc.text('Camera', 95, headerY + 5);
-        doc.text('Scene', 125, headerY + 5);
-        doc.text('Mic', 150, headerY + 5);
-        doc.text('Notes', 175, headerY + 5);
+        doc.text('Camera', 90, headerY + 5);
+        doc.text('Scene', 115, headerY + 5);
+        doc.text('Mic', 140, headerY + 5);
+        doc.text('Notes', 165, headerY + 5);
         
         // Add horizontal line
         doc.setLineWidth(0.3);
@@ -112,7 +109,7 @@ export function exportToPDF(programData, isThirdSunday) {
             // Program item text (allow 2 lines if needed)
             doc.setTextColor(0, 0, 0);
             doc.setFontSize(fontSize);
-            const maxItemWidth = 70;
+            const maxItemWidth = 65; // Slightly reduced to make room for notes
             const lines = doc.splitTextToSize(item.programItem, maxItemWidth);
             const linesToShow = Math.min(2, lines.length); // Max 2 lines
             
@@ -120,68 +117,81 @@ export function exportToPDF(programData, isThirdSunday) {
                 doc.text(lines[i], 22, yPosition + 2 + (i * (fontSize * 0.8)));
             }
             
-            // Camera with circle shape - ensure text fits
-            const cameraX = 98;
-            const cameraY = yPosition + 3;
+            // Camera with circle shape - ensure text fits and is centered
+            const cameraX = 92;
+            const cameraY = yPosition + (maxRowHeight / 2);
             const cameraRadius = shapeSize;
             doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
             doc.circle(cameraX, cameraY, cameraRadius, 'F');
             
-            // Camera text - auto-size to fit in circle
+            // Camera text - optimize size specifically for circles
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
-            let cameraFontSize = fontSize - 1;
+            let cameraFontSize = Math.max(6, Math.min(fontSize, cameraRadius * 2));
             doc.setFontSize(cameraFontSize);
-            while (doc.getTextWidth(item.camera) > cameraRadius * 1.5 && cameraFontSize > 4) {
+            
+            // Ensure text fits in circle with proper margins
+            while (doc.getTextWidth(item.camera) > cameraRadius * 1.6 && cameraFontSize > 4) {
                 cameraFontSize--;
                 doc.setFontSize(cameraFontSize);
             }
-            const cameraTextWidth = doc.getTextWidth(item.camera);
-            doc.text(item.camera, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.3));
             
-            // Scene with rectangle shape - ensure text fits
-            const sceneX = 125;
-            const sceneY = yPosition;
-            const sceneWidth = shapeSize * 2.5;
+            // Center text perfectly in circle
+            const cameraTextWidth = doc.getTextWidth(item.camera);
+            doc.text(item.camera, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.25));
+            
+            // Scene with rectangle shape - ensure text fits and is centered
+            const sceneX = 115;
+            const sceneY = yPosition + (maxRowHeight / 2) - (shapeSize * 0.9);
+            const sceneWidth = shapeSize * 2.8;
             const sceneHeight = shapeSize * 1.8;
             doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
             doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
             
-            // Scene text - auto-size to fit in rectangle
+            // Scene text - optimize size specifically for rectangles
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
-            let sceneFontSize = fontSize - 1;
+            let sceneFontSize = Math.max(6, Math.min(fontSize, shapeSize * 1.5));
             doc.setFontSize(sceneFontSize);
-            while (doc.getTextWidth(item.scene) > sceneWidth - 2 && sceneFontSize > 4) {
+            
+            // Ensure text fits in rectangle with proper margins
+            while (doc.getTextWidth(item.scene) > sceneWidth - 3 && sceneFontSize > 4) {
                 sceneFontSize--;
                 doc.setFontSize(sceneFontSize);
             }
-            const sceneTextWidth = doc.getTextWidth(item.scene);
-            doc.text(item.scene, sceneX + (sceneWidth / 2) - (sceneTextWidth / 2), sceneY + (sceneHeight / 2) + (sceneFontSize * 0.3));
             
-            // Mic with triangle shape - ensure text fits
-            const micX = 152;
-            const micY = yPosition + 3;
-            const triangleSize = shapeSize;
+            // Center text perfectly in rectangle
+            const sceneTextWidth = doc.getTextWidth(item.scene);
+            doc.text(item.scene, 
+                sceneX + (sceneWidth / 2) - (sceneTextWidth / 2), 
+                sceneY + (sceneHeight / 2) + (sceneFontSize * 0.25)
+            );
+            
+            // Mic with triangle shape - ensure text fits and is centered
+            const micX = 142;
+            const micY = yPosition + (maxRowHeight / 2);
+            const triangleSize = shapeSize * 1.2;
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
             
             // Draw triangle (pointing up)
             doc.triangle(
-                micX, micY - triangleSize,           // Top point
-                micX - triangleSize, micY + triangleSize/2,  // Bottom left
-                micX + triangleSize, micY + triangleSize/2,  // Bottom right
+                micX, micY - triangleSize,                    // Top point
+                micX - triangleSize, micY + triangleSize/2,   // Bottom left
+                micX + triangleSize, micY + triangleSize/2,   // Bottom right
                 'F'
             );
             
-            // Mic text - auto-size to fit in triangle, split to 2 lines if needed
+            // Mic text - optimize size specifically for triangles
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
-            let micFontSize = Math.max(4, fontSize - 3);
+            let micFontSize = Math.max(4, Math.min(fontSize - 1, triangleSize * 0.8));
             doc.setFontSize(micFontSize);
             
             // Split mic text into lines if it's too long
             let micLines = [];
-            if (doc.getTextWidth(item.mic) > triangleSize * 1.8) {
+            const maxMicWidth = triangleSize * 1.6;
+            
+            if (doc.getTextWidth(item.mic) > maxMicWidth) {
                 // Try to split on common delimiters
                 if (item.mic.includes(',')) {
                     micLines = item.mic.split(',').map(s => s.trim());
@@ -198,37 +208,59 @@ export function exportToPDF(programData, isThirdSunday) {
                 micLines = [item.mic];
             }
             
-            // Limit to 2 lines and render
+            // Further reduce font size if needed for split text
             const micLinesToShow = Math.min(2, micLines.length);
+            for (let line of micLines.slice(0, micLinesToShow)) {
+                while (doc.getTextWidth(line) > maxMicWidth && micFontSize > 3) {
+                    micFontSize--;
+                    doc.setFontSize(micFontSize);
+                }
+            }
+            
+            // Center text perfectly in triangle
+            const lineSpacing = micFontSize * 0.9;
+            const totalHeight = micLinesToShow * lineSpacing;
+            const startY = micY - (totalHeight / 2) + (lineSpacing / 2);
+            
             for (let i = 0; i < micLinesToShow; i++) {
                 const line = micLines[i];
                 const lineWidth = doc.getTextWidth(line);
-                doc.text(line, micX - (lineWidth / 2), micY - (micFontSize * 0.5) + (i * micFontSize * 0.8));
+                doc.text(line, micX - (lineWidth / 2), startY + (i * lineSpacing));
             }
             
-            // Notes with rounded rectangle (if exists) - ensure text fits
+            // Notes with rounded rectangle (if exists) - longer column
             if (item.notes && item.notes.trim()) {
-                const notesX = 175;
-                const notesY = yPosition;
-                const maxNotesWidth = 15;
+                const notesX = 162;
+                const notesY = yPosition + (maxRowHeight / 2) - (shapeSize * 0.9);
+                const maxNotesWidth = 26; // Increased width for longer notes column
                 
-                // Calculate required width for notes
+                // Notes text - optimize size specifically for notes
                 doc.setTextColor(0, 0, 0);
                 doc.setFont(undefined, 'normal');
-                let notesFontSize = fontSize - 2;
+                let notesFontSize = Math.max(5, Math.min(fontSize - 1, shapeSize * 1.2));
                 doc.setFontSize(notesFontSize);
                 
                 // Split notes into lines if needed
-                const notesLines = doc.splitTextToSize(item.notes, maxNotesWidth);
+                const notesLines = doc.splitTextToSize(item.notes, maxNotesWidth - 2);
                 const notesLinesToShow = Math.min(2, notesLines.length);
-                const notesHeight = Math.max(shapeSize * 1.5, notesLinesToShow * notesFontSize * 1.2);
+                
+                // Calculate optimal height for notes box
+                const lineHeight = notesFontSize * 1.2;
+                const notesHeight = Math.max(shapeSize * 1.8, notesLinesToShow * lineHeight + 2);
                 
                 doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
                 doc.roundedRect(notesX, notesY, maxNotesWidth, notesHeight, 1, 1, 'F');
                 
-                // Render notes text
+                // Center text vertically and horizontally in notes box
+                const totalTextHeight = notesLinesToShow * lineHeight;
+                const startY = notesY + (notesHeight / 2) - (totalTextHeight / 2) + lineHeight;
+                
                 for (let i = 0; i < notesLinesToShow; i++) {
-                    doc.text(notesLines[i], notesX + 1, notesY + (notesFontSize * 1.2) + (i * notesFontSize * 1.1));
+                    const line = notesLines[i];
+                    const lineWidth = doc.getTextWidth(line);
+                    // Center horizontally within the notes box
+                    const textX = notesX + (maxNotesWidth / 2) - (lineWidth / 2);
+                    doc.text(line, textX, startY + (i * lineHeight));
                 }
             }
             
