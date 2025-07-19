@@ -168,11 +168,11 @@ export function exportToPDF(programData, isThirdSunday) {
                 doc.setFontSize(sceneFontSize);
             }
             
-            // Center text perfectly in rectangle with better vertical alignment
+            // Center text perfectly in rectangle with proper vertical alignment
             const sceneTextWidth = doc.getTextWidth(item.scene);
             doc.text(item.scene, 
                 sceneX + (sceneWidth / 2) - (sceneTextWidth / 2), 
-                sceneY + (sceneHeight / 2) + (sceneFontSize * 0.35)
+                sceneY + (sceneHeight / 2) + (sceneFontSize * 0.25)
             );
             
             // Mic with rounded rectangle shape (instead of triangle) - perfectly centered
@@ -219,10 +219,10 @@ export function exportToPDF(programData, isThirdSunday) {
                 }
             }
             
-            // Center text perfectly in rectangle with improved spacing
+            // Center text perfectly in rectangle with proper vertical alignment
             const lineSpacing = micFontSize * 1.15;
             const totalHeight = micLinesToShow * lineSpacing;
-            const startY = micY + (micHeight / 2) - (totalHeight / 2) + (lineSpacing * 0.8);
+            const startY = micY + (micHeight / 2) - (totalHeight / 2) + (micFontSize * 0.75);
             
             for (let i = 0; i < micLinesToShow; i++) {
                 const line = micLines[i];
@@ -261,9 +261,9 @@ export function exportToPDF(programData, isThirdSunday) {
                 doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
                 doc.roundedRect(notesX, notesY, maxNotesWidth, notesHeight, 1.5, 1.5, 'F');
                 
-                // Center text perfectly in notes box with improved spacing
+                // Center text perfectly in notes box with proper vertical alignment
                 const totalTextHeight = notesLinesToShow * lineHeight;
-                const textStartY = notesY + (notesHeight / 2) - (totalTextHeight / 2) + (lineHeight * 0.8);
+                const textStartY = notesY + (notesHeight / 2) - (totalTextHeight / 2) + (notesFontSize * 0.75);
                 
                 for (let i = 0; i < notesLinesToShow; i++) {
                     const line = notesLines[i];
