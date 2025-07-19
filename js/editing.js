@@ -20,6 +20,11 @@ export function editField(index, field, programData, displayCallback) {
             <input type="text" class="form-control form-control-sm" id="edit-${field}-${index}" 
                    value="${currentValue}" maxlength="${CONFIG.MAX_MIC_LENGTH}" style="min-width: 120px;">
         `;
+    } else if (field === 'notes') {
+        inputHtml = `
+            <input type="text" class="form-control form-control-sm" id="edit-${field}-${index}" 
+                   value="${currentValue}" maxlength="${CONFIG.MAX_NOTES_LENGTH}" style="min-width: 120px;" placeholder="Optional notes">
+        `;
     }
     
     const fieldElement = document.querySelector(`[data-field="${field}"][data-index="${index}"]`);
@@ -90,7 +95,8 @@ export function saveField(index, field, programData, displayCallback) {
     
     const newValue = input.value.trim();
     
-    if (!newValue) {
+    // Notes field can be empty, but other fields cannot
+    if (!newValue && field !== 'notes') {
         showAlert('Field cannot be empty', 'warning');
         return;
     }
@@ -132,7 +138,8 @@ function getBadgeClass(field) {
     const classes = {
         camera: 'bg-primary',
         scene: 'bg-secondary',
-        mic: 'bg-success'
+        mic: 'bg-success',
+        notes: 'bg-warning'
     };
     return classes[field] || 'bg-secondary';
 }
@@ -180,7 +187,8 @@ function createRowEditForm(item) {
     }).join('');
     
     const sceneTiles = FORM_OPTIONS.scene.map(option => {
-        const isSelected = item.scene === option.value;
+        const isSelected = item.scene === option.value || 
+                          (item.scene && item.scene.includes(option.value));
         return `
             <div class="selection-tile ${isSelected ? 'selected' : ''}" 
                  data-value="${option.value}" 

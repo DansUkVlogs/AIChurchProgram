@@ -327,6 +327,9 @@ function displayResults() {
                 <span class="badge bg-success editable-field" data-field="mic" data-index="${index}" onclick="window.editField(${index}, 'mic')">${item.mic}</span>
             </td>
             <td>
+                <span class="badge bg-warning editable-field ${item.notes ? '' : 'text-muted'}" data-field="notes" data-index="${index}" onclick="window.editField(${index}, 'notes')">${item.notes || 'Add notes...'}</span>
+            </td>
+            <td>
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="window.editRow(${index})" title="Edit Row">
                     <i class="fas fa-edit"></i>
                 </button>

@@ -31,47 +31,47 @@ export const CONFIG = {
 export const AUTO_FILL_RULES = {
     songs: {
         keywords: ['sasb', 'sof', 'song', 'hymn', 'chorus', 'worship'],
-        default: { camera: '2', scene: '1', mic: 'Amb', notes: 'Song' },
-        wg: { camera: '2', scene: '1', mic: '2,3,4', notes: 'Worship Group' },
-        piano: { camera: '3', scene: '1', mic: 'Amb', notes: 'Piano' }
+        default: { camera: '2', scene: '1', mic: 'Amb', notes: '' },
+        wg: { camera: '2', scene: '1', mic: '2,3,4', notes: '' },
+        piano: { camera: '3', scene: '1', mic: 'Amb', notes: '' }
     },
     
     offering: {
         keywords: ['offering'],
-        default: { camera: '1', scene: '1', mic: 'AV', notes: 'Offering' },
-        withAnnouncements: { camera: '2/1', scene: '1', mic: '2/AV', notes: 'Announcements & Offering' }
+        default: { camera: '1', scene: '1', mic: 'AV', notes: '' },
+        withAnnouncements: { camera: '2/1', scene: '1', mic: '2/AV', notes: '' }
     },
     
     announcements: {
         keywords: ['announcement'],
-        default: { camera: '4', scene: '1', mic: 'Lectern', notes: 'Announcements' }
+        default: { camera: '4', scene: '1', mic: 'Lectern', notes: '' }
     },
     
     ypSpot: {
         keywords: ['yp', 'young people', 'youth'],
-        default: { camera: '3', scene: '2', mic: 'Headset', notes: 'YP Spot' },
-        thirdSunday: { camera: '3', scene: '2', mic: 'Handheld', notes: 'YP Spot' }
+        default: { camera: '3', scene: '2', mic: 'Headset', notes: '' },
+        thirdSunday: { camera: '3', scene: '2', mic: 'Handheld', notes: '' }
     },
     
     bibleReading: {
         keywords: ['bible reading', 'scripture', 'reading'],
-        default: { camera: '4', scene: '1', mic: 'Lectern', notes: 'Bible Reading' },
-        thirdSunday: { camera: '2', scene: '1', mic: '2', notes: 'Bible Reading' }
+        default: { camera: '4', scene: '1', mic: 'Lectern', notes: '' },
+        thirdSunday: { camera: '2', scene: '1', mic: '2', notes: '' }
     },
     
     message: {
         keywords: ['message', 'sermon', 'address'],
-        default: { camera: '4', scene: '3', mic: 'Lectern', notes: 'Message' }
+        default: { camera: '4', scene: '3', mic: 'Lectern', notes: '' }
     },
     
     prayer: {
         keywords: ['prayer'],
-        default: { camera: '4', scene: '1', mic: 'Lectern', notes: 'Prayer' }
+        default: { camera: '4', scene: '1', mic: 'Lectern', notes: '' }
     },
     
     band: {
         keywords: ['band'],
-        default: { camera: '2', scene: '1', mic: 'Amb', notes: 'Band' }
+        default: { camera: '2', scene: '1', mic: 'Amb', notes: '' }
     }
 };
 
