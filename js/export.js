@@ -50,7 +50,7 @@ export function exportToPDF(programData, isThirdSunday) {
             shapeSize = Math.max(2.5, baseRowHeight * 0.3);
         }
         
-        const maxRowHeight = baseRowHeight * 1.1; // Reduce multiplier for more items
+        const maxRowHeight = baseRowHeight * 1.05; // Reduce gap between rows
         
         // Add title with styling
         doc.setFillColor(52, 58, 64); // Dark background
@@ -119,23 +119,29 @@ export function exportToPDF(programData, isThirdSunday) {
         let yPosition = headerY + 16;
         
         programData.forEach((item, index) => {
-            // Alternate row background
-            if (index % 2 === 0) {
-                doc.setFillColor(252, 252, 252);
-                doc.rect(20, yPosition - 4, 170, maxRowHeight, 'F');
-            }
-            
-            // Calculate vertical center for all elements
+            // Calculate vertical center for all elements first
             const rowCenterY = yPosition + (maxRowHeight / 2);
             
-            // Program item text with smart scaling and truncation
+            // Only add subtle alternating background if it won't interfere
+            if (index % 2 === 0 && maxRowHeight > 12) {
+                doc.setFillColor(254, 254, 254); // Very light gray, less intrusive
+                doc.rect(20, yPosition - 1, 170, maxRowHeight - 2, 'F');
+            }
+            
+            // Program item text with smart scaling, cleaning, and wrapping
             doc.setTextColor(0, 0, 0);
             let itemFontSize = fontSize;
             doc.setFontSize(itemFontSize);
-            const maxItemWidth = 65;
             
-            // Start with original text and scale font down if needed
-            let textToShow = item.programItem;
+            // Clean up the text - remove extra spaces and normalize whitespace
+            let textToShow = item.programItem
+                .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+                .trim();               // Remove leading/trailing spaces
+            
+            // More restrictive width to ensure no overflow into shapes
+            const maxItemWidth = 60; // Reduced from 65 to prevent overflow
+            
+            // Force line breaks - don't let text overflow
             let lines = doc.splitTextToSize(textToShow, maxItemWidth);
             
             // If text is too long, try smaller font first
@@ -147,14 +153,14 @@ export function exportToPDF(programData, isThirdSunday) {
             
             // If still too long after font scaling, truncate text intelligently
             if (lines.length > 2) {
-                // Try to find a good break point (space, comma, dash)
-                const maxChars = Math.floor(maxItemWidth / (itemFontSize * 0.6)) * 2; // Estimate chars for 2 lines
+                // More aggressive truncation to prevent overflow
+                const maxChars = Math.floor(maxItemWidth / (itemFontSize * 0.55)) * 2; // More conservative estimate
                 if (textToShow.length > maxChars) {
                     // Look for break points near the max length
-                    const breakPoints = [' ', ',', '-', '&'];
+                    const breakPoints = [' ', ',', '-', '&', '(', ')'];
                     let truncateAt = maxChars - 3; // Leave room for "..."
                     
-                    for (let i = truncateAt; i > maxChars * 0.7; i--) {
+                    for (let i = truncateAt; i > maxChars * 0.6; i--) {
                         if (breakPoints.includes(textToShow[i])) {
                             truncateAt = i;
                             break;
@@ -166,15 +172,24 @@ export function exportToPDF(programData, isThirdSunday) {
                 }
             }
             
+            // Limit to exactly 2 lines maximum
             const linesToShow = Math.min(2, lines.length);
             
             // Calculate starting Y to center the text block
-            const lineHeight = itemFontSize * 0.8;
+            const lineHeight = itemFontSize * 0.85;
             const totalTextHeight = linesToShow * lineHeight;
             const textStartY = rowCenterY - (totalTextHeight / 2) + lineHeight;
             
+            // Render each line, ensuring they don't exceed width
             for (let i = 0; i < linesToShow; i++) {
-                doc.text(lines[i], 22, textStartY + (i * lineHeight));
+                let lineText = lines[i];
+                
+                // Double-check line width and truncate if necessary
+                while (doc.getTextWidth(lineText) > maxItemWidth && lineText.length > 10) {
+                    lineText = lineText.substring(0, lineText.length - 4) + '...';
+                }
+                
+                doc.text(lineText, 22, textStartY + (i * lineHeight));
             }
             
             // Reset font size for other elements
@@ -360,29 +375,12 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFont(undefined, 'normal');
             doc.setFontSize(fontSize);
             yPosition += maxRowHeight;
-            
-            // Check if we're approaching page limits
-            if (yPosition > 275) {
-                console.warn(`Row ${index + 1} is at Y position ${yPosition}, approaching page limit`);
-            }
         });
-        
-        // Check if content fits and warn if necessary
-        const finalYPosition = yPosition;
-        const pageLimit = 280;
-        
-        if (finalYPosition > pageLimit) {
-            console.warn(`Content extends to Y position ${finalYPosition}, may be cut off (page limit: ${pageLimit})`);
-            // Add a note if content is cut off
-            doc.setFontSize(8);
-            doc.setTextColor(255, 0, 0); // Red warning text
-            doc.text('⚠ Some content may be cut off - consider reducing program length', 20, 275);
-        }
         
         // Add footer
         doc.setFontSize(7);
         doc.setTextColor(128, 128, 128);
-        const footerY = Math.min(285, finalYPosition + 10); // Adjust footer position if needed
+        const footerY = Math.min(285, yPosition + 5); // Adjust footer position if needed
         doc.text('Generated by Church Program Smart Assistant', 20, footerY);
         doc.text(`Total Items: ${programData.length}`, 170, footerY);
         
