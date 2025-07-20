@@ -219,9 +219,11 @@ export function exportToPDF(programData, isThirdSunday) {
             // If still too wide, truncate text
             while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraText.length > 3) {
                 cameraText = cameraText.substring(0, cameraText.length - 1);
-                if (!cameraText.endsWith('...')) {
-                    cameraText = cameraText.substring(0, cameraText.length - 2) + '...';
-                }
+            }
+            
+            // Add ellipsis if text was truncated
+            if (cameraText.length < item.camera.length && cameraText.length > 3) {
+                cameraText = cameraText.substring(0, cameraText.length - 3) + '...';
             }
             
             // Center text perfectly in circle with proper vertical alignment
@@ -253,9 +255,11 @@ export function exportToPDF(programData, isThirdSunday) {
             // If still too wide, truncate text
             while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneText.length > 3) {
                 sceneText = sceneText.substring(0, sceneText.length - 1);
-                if (!sceneText.endsWith('...')) {
-                    sceneText = sceneText.substring(0, sceneText.length - 2) + '...';
-                }
+            }
+            
+            // Add ellipsis if text was truncated
+            if (sceneText.length < item.scene.length && sceneText.length > 3) {
+                sceneText = sceneText.substring(0, sceneText.length - 3) + '...';
             }
             
             // Center text perfectly in rectangle with proper vertical alignment
@@ -290,9 +294,11 @@ export function exportToPDF(programData, isThirdSunday) {
             // If still too wide, truncate text
             while (doc.getTextWidth(micText) > maxMicWidth && micText.length > 3) {
                 micText = micText.substring(0, micText.length - 1);
-                if (!micText.endsWith('...')) {
-                    micText = micText.substring(0, micText.length - 2) + '...';
-                }
+            }
+            
+            // Add ellipsis if text was truncated
+            if (micText.length < item.mic.length && micText.length > 3) {
+                micText = micText.substring(0, micText.length - 3) + '...';
             }
             
             // Center text perfectly in rectangle with proper vertical alignment
