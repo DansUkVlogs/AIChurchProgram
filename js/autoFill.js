@@ -82,12 +82,12 @@ export function applyAutoFillLogic(item, isThirdSunday = false) {
         if (detectedSettings) {
             Object.assign(item, detectedSettings);
         } else {
-            item.notes = 'Unmatched - requires manual input';
+            item._isUnmatched = true; // Internal flag for tracking
         }
     }
     // If no matches found, leave blank for user input
     else {
-        item.notes = 'Unmatched - requires manual input';
+        item._isUnmatched = true; // Internal flag for tracking
     }
     
     return item;

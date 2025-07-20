@@ -195,30 +195,40 @@ export function exportToPDF(programData, isThirdSunday) {
             // Reset font size for other elements
             doc.setFontSize(fontSize);
             
-            // Camera with circle shape - perfectly centered
+            // Camera with circle shape - perfectly centered, single line only
             const cameraX = 92;
             const cameraY = rowCenterY;
             const cameraRadius = shapeSize * 1.3; // Larger circle for better readability
             doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
             doc.circle(cameraX, cameraY, cameraRadius, 'F');
             
-            // Camera text - maximized font size to fill the circle
+            // Camera text - single line only, maximized font size
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
+            let cameraText = item.camera;
             let cameraFontSize = Math.min(16, cameraRadius * 2.2); // Start with larger size
             doc.setFontSize(cameraFontSize);
             
-            // Maximize font size while ensuring text fits comfortably in circle
-            while (doc.getTextWidth(item.camera) > cameraRadius * 1.6 && cameraFontSize > 7) {
+            // Ensure text fits in circle on single line, truncate if necessary
+            const maxCameraWidth = cameraRadius * 1.6;
+            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraFontSize > 7) {
                 cameraFontSize--;
                 doc.setFontSize(cameraFontSize);
             }
             
-            // Center text perfectly in circle with proper vertical alignment
-            const cameraTextWidth = doc.getTextWidth(item.camera);
-            doc.text(item.camera, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.25));
+            // If still too wide, truncate text
+            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraText.length > 3) {
+                cameraText = cameraText.substring(0, cameraText.length - 1);
+                if (!cameraText.endsWith('...')) {
+                    cameraText = cameraText.substring(0, cameraText.length - 2) + '...';
+                }
+            }
             
-            // Scene with rectangle shape - perfectly centered
+            // Center text perfectly in circle with proper vertical alignment
+            const cameraTextWidth = doc.getTextWidth(cameraText);
+            doc.text(cameraText, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.25));
+            
+            // Scene with rectangle shape - perfectly centered, single line only
             const sceneX = 115;
             const sceneY = rowCenterY - (shapeSize * 1.2);
             const sceneWidth = shapeSize * 3.5; // Larger for better text space
@@ -226,26 +236,36 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
             doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
             
-            // Scene text - maximized font size to fill the rectangle
+            // Scene text - single line only, maximized font size
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
+            let sceneText = item.scene;
             let sceneFontSize = Math.min(16, shapeSize * 2.2); // Start with larger size
             doc.setFontSize(sceneFontSize);
             
-            // Maximize font size while ensuring text fits comfortably in rectangle
-            while (doc.getTextWidth(item.scene) > sceneWidth - 6 && sceneFontSize > 7) {
+            // Ensure text fits in rectangle on single line, scale font or truncate
+            const maxSceneWidth = sceneWidth - 6;
+            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneFontSize > 7) {
                 sceneFontSize--;
                 doc.setFontSize(sceneFontSize);
             }
             
+            // If still too wide, truncate text
+            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneText.length > 3) {
+                sceneText = sceneText.substring(0, sceneText.length - 1);
+                if (!sceneText.endsWith('...')) {
+                    sceneText = sceneText.substring(0, sceneText.length - 2) + '...';
+                }
+            }
+            
             // Center text perfectly in rectangle with proper vertical alignment
-            const sceneTextWidth = doc.getTextWidth(item.scene);
-            doc.text(item.scene, 
+            const sceneTextWidth = doc.getTextWidth(sceneText);
+            doc.text(sceneText, 
                 sceneX + (sceneWidth / 2) - (sceneTextWidth / 2), 
                 sceneY + (sceneHeight / 2) + (sceneFontSize * 0.25)
             );
             
-            // Mic with rounded rectangle shape (instead of triangle) - perfectly centered
+            // Mic with rounded rectangle shape - perfectly centered, single line only
             const micX = 140;
             const micY = rowCenterY - (shapeSize * 1.2);
             const micWidth = shapeSize * 3.8; // Wider for better text space
@@ -253,90 +273,73 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
             doc.roundedRect(micX, micY, micWidth, micHeight, 1.5, 1.5, 'F');
             
-            // Mic text - maximized font size for better readability
+            // Mic text - single line only, maximized font size
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
+            let micText = item.mic;
             let micFontSize = Math.min(16, shapeSize * 2.0); // Start with larger size
             doc.setFontSize(micFontSize);
             
-            // Split mic text into lines if needed, with more space now
-            let micLines = [];
-            const maxMicWidth = micWidth - 6; // Better margin inside rectangle
-            
-            if (doc.getTextWidth(item.mic) > maxMicWidth) {
-                // Try to split on common delimiters
-                if (item.mic.includes(',')) {
-                    micLines = item.mic.split(',').map(s => s.trim());
-                } else if (item.mic.includes('/')) {
-                    micLines = item.mic.split('/').map(s => s.trim());
-                } else if (item.mic.length > 8) {
-                    // Split long text into 2 lines
-                    const mid = Math.ceil(item.mic.length / 2);
-                    micLines = [item.mic.substring(0, mid), item.mic.substring(mid)];
-                } else {
-                    micLines = [item.mic];
-                }
-            } else {
-                micLines = [item.mic];
+            // Ensure text fits in rectangle on single line, scale font or truncate
+            const maxMicWidth = micWidth - 6;
+            while (doc.getTextWidth(micText) > maxMicWidth && micFontSize > 6) {
+                micFontSize--;
+                doc.setFontSize(micFontSize);
             }
             
-            // Ensure each line fits and maximize font size
-            const micLinesToShow = Math.min(2, micLines.length);
-            for (let line of micLines.slice(0, micLinesToShow)) {
-                while (doc.getTextWidth(line) > maxMicWidth && micFontSize > 6) {
-                    micFontSize--;
-                    doc.setFontSize(micFontSize);
+            // If still too wide, truncate text
+            while (doc.getTextWidth(micText) > maxMicWidth && micText.length > 3) {
+                micText = micText.substring(0, micText.length - 1);
+                if (!micText.endsWith('...')) {
+                    micText = micText.substring(0, micText.length - 2) + '...';
                 }
             }
             
             // Center text perfectly in rectangle with proper vertical alignment
-            const lineSpacing = micFontSize * 1.15;
-            const totalHeight = micLinesToShow * lineSpacing;
-            const startY = micY + (micHeight / 2) - (totalHeight / 2) + (micFontSize * 0.75);
-            
-            for (let i = 0; i < micLinesToShow; i++) {
-                const line = micLines[i];
-                const lineWidth = doc.getTextWidth(line);
-                doc.text(line, micX + (micWidth / 2) - (lineWidth / 2), startY + (i * lineSpacing));
-            }
+            const micTextWidth = doc.getTextWidth(micText);
+            doc.text(micText, micX + (micWidth / 2) - (micTextWidth / 2), micY + (micHeight / 2) + (micFontSize * 0.25));
             
             // Notes with rounded rectangle (if exists) - perfectly centered
             if (item.notes && item.notes.trim()) {
                 const notesX = 162;
                 const notesY = rowCenterY - (shapeSize * 1.2);
-                const notesWidth = shapeSize * 3.8; // Same width as mic box for consistency
+                const notesWidth = shapeSize * 11; // Even longer for maximum text space
                 const notesHeight = shapeSize * 2.4; // Same height as mic box for consistency
                 
-                // Notes text - start with larger font and scale down to fit on one line first
+                // Notes text - use same font sizing logic as mic for consistency
                 doc.setTextColor(0, 0, 0);
                 doc.setFont(undefined, 'normal');
-                let notesFontSize = Math.min(16, shapeSize * 2.0); // Start with larger size
+                let notesFontSize = Math.min(16, shapeSize * 2.0); // Same as mic box
                 doc.setFontSize(notesFontSize);
                 
-                // First try to fit on one line by reducing font size
-                while (doc.getTextWidth(item.notes) > notesWidth - 6 && notesFontSize > 6) {
-                    notesFontSize--;
-                    doc.setFontSize(notesFontSize);
-                }
-                
-                // If still too long after minimum font size, split into lines
+                // Split notes text into lines if needed, using same logic as mic
                 let notesLines = [];
-                if (doc.getTextWidth(item.notes) > notesWidth - 6) {
-                    notesLines = doc.splitTextToSize(item.notes, notesWidth - 6);
+                const maxNotesTextWidth = notesWidth - 6; // Same margin as mic
+                
+                if (doc.getTextWidth(item.notes) > maxNotesTextWidth) {
+                    // Try to split on common delimiters like mic box
+                    if (item.notes.includes(',')) {
+                        notesLines = item.notes.split(',').map(s => s.trim());
+                    } else if (item.notes.includes(' ')) {
+                        // Split on spaces if too long
+                        notesLines = doc.splitTextToSize(item.notes, maxNotesTextWidth);
+                    } else {
+                        notesLines = [item.notes];
+                    }
                 } else {
                     notesLines = [item.notes];
                 }
                 
                 const notesLinesToShow = Math.min(2, notesLines.length);
                 
-                // Ensure each line fits with the current font size
+                // Ensure each line fits and reduce font size if needed (same as mic)
                 for (let line of notesLines.slice(0, notesLinesToShow)) {
-                    while (doc.getTextWidth(line) > notesWidth - 6 && notesFontSize > 6) {
+                    while (doc.getTextWidth(line) > maxNotesTextWidth && notesFontSize > 6) {
                         notesFontSize--;
                         doc.setFontSize(notesFontSize);
-                        // Re-split text with new font size
-                        if (notesLines.length > 1) {
-                            notesLines = doc.splitTextToSize(item.notes, notesWidth - 6);
+                        // Re-split text with new font size if needed
+                        if (notesLines.length > 1 && item.notes.includes(' ')) {
+                            notesLines = doc.splitTextToSize(item.notes, maxNotesTextWidth);
                         }
                     }
                 }
@@ -345,26 +348,17 @@ export function exportToPDF(programData, isThirdSunday) {
                 doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
                 doc.roundedRect(notesX, notesY, notesWidth, notesHeight, 1.5, 1.5, 'F');
                 
-                // Center text perfectly in notes box with proper vertical alignment
-                if (notesLinesToShow === 1) {
-                    // Single line - center vertically in the box
-                    const lineWidth = doc.getTextWidth(notesLines[0]);
+                // Center text perfectly in notes box with tighter line spacing
+                const lineSpacing = notesFontSize * 0.9; // Much tighter spacing to fit better
+                const totalHeight = notesLinesToShow * lineSpacing;
+                const startY = notesY + (notesHeight / 2) - (totalHeight / 2) + (notesFontSize * 0.6);
+                
+                for (let i = 0; i < notesLinesToShow; i++) {
+                    const line = notesLines[i];
+                    const lineWidth = doc.getTextWidth(line);
+                    // Center horizontally within the notes box
                     const textX = notesX + (notesWidth / 2) - (lineWidth / 2);
-                    const textY = notesY + (notesHeight / 2) + (notesFontSize * 0.25);
-                    doc.text(notesLines[0], textX, textY);
-                } else {
-                    // Multiple lines - center the text block vertically
-                    const lineHeight = notesFontSize * 1.25;
-                    const totalTextHeight = notesLinesToShow * lineHeight;
-                    const textStartY = notesY + (notesHeight / 2) - (totalTextHeight / 2) + (notesFontSize * 0.75);
-                    
-                    for (let i = 0; i < notesLinesToShow; i++) {
-                        const line = notesLines[i];
-                        const lineWidth = doc.getTextWidth(line);
-                        // Center horizontally within the notes box
-                        const textX = notesX + (notesWidth / 2) - (lineWidth / 2);
-                        doc.text(line, textX, textStartY + (i * lineHeight));
-                    }
+                    doc.text(line, textX, startY + (i * lineSpacing));
                 }
             }
             
@@ -441,12 +435,12 @@ function createJSONExport(programData, isThirdSunday) {
                 mic: item.mic
             },
             notes: item.notes || '',
-            autoFilled: item.notes !== 'Unmatched - requires manual input'
+            autoFilled: !item._isUnmatched // Check internal flag instead of notes content
         })),
         summary: {
             totalItems: programData.length,
-            autoFilledItems: programData.filter(item => item.notes !== 'Unmatched - requires manual input').length,
-            manualItems: programData.filter(item => item.notes === 'Unmatched - requires manual input').length
+            autoFilledItems: programData.filter(item => !item._isUnmatched).length,
+            manualItems: programData.filter(item => item._isUnmatched).length
         }
     };
 }
@@ -527,7 +521,7 @@ function validateJSONStructure(data) {
 export function generateSummaryReport(programData) {
     const totalItems = programData.length;
     const autoFilledItems = programData.filter(item => 
-        item.notes && item.notes !== 'Unmatched - requires manual input'
+        !item._isUnmatched
     ).length;
     
     const cameraUsage = {};
