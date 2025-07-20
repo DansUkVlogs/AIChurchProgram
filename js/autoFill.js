@@ -169,6 +169,13 @@ function detectByItemType(parsedInfo, isThirdSunday) {
             return { camera: '4', scene: '1', mic: 'Lectern', notes: '' };
         case 'offering':
             return { camera: '1', scene: '1', mic: 'AV', notes: '' };
+        case 'singing company':
+            return { camera: '3', scene: '1', mic: 'Amb', notes: '' };
+        case 's/coy':
+            return { camera: '3', scene: '1', mic: 'Amb', notes: '' };
+        case 'video':
+            return { camera: '1', scene: '1', mic: 'AV', notes: '' };
+
     }
     
     // Performer-based detection

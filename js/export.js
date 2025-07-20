@@ -272,7 +272,7 @@ export function exportToPDF(programData, isThirdSunday) {
             // Mic with rounded rectangle shape - perfectly centered, single line only
             const micX = 140;
             const micY = rowCenterY - (shapeSize * 1.2);
-            const micWidth = shapeSize * 3.8; // Wider for better text space
+            const micWidth = shapeSize * 3.8 * 1.5; // Wider for better text space
             const micHeight = shapeSize * 2.4; // Taller for better text
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
             doc.roundedRect(micX, micY, micWidth, micHeight, 1.5, 1.5, 'F');
