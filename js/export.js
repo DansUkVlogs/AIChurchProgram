@@ -304,24 +304,25 @@ export function exportToPDF(programData, isThirdSunday) {
             if (item.notes && item.notes.trim()) {
                 const notesX = 162;
                 const notesY = rowCenterY - (shapeSize * 1.2);
-                const maxNotesWidth = 28; // Wider for better text space
+                const notesWidth = shapeSize * 3.8; // Same width as mic box for consistency
+                const notesHeight = shapeSize * 2.4; // Same height as mic box for consistency
                 
                 // Notes text - start with larger font and scale down to fit on one line first
                 doc.setTextColor(0, 0, 0);
                 doc.setFont(undefined, 'normal');
-                let notesFontSize = Math.min(14, shapeSize * 1.8); // Start with larger size
+                let notesFontSize = Math.min(16, shapeSize * 2.0); // Start with larger size
                 doc.setFontSize(notesFontSize);
                 
                 // First try to fit on one line by reducing font size
-                while (doc.getTextWidth(item.notes) > maxNotesWidth - 4 && notesFontSize > 6) {
+                while (doc.getTextWidth(item.notes) > notesWidth - 6 && notesFontSize > 6) {
                     notesFontSize--;
                     doc.setFontSize(notesFontSize);
                 }
                 
                 // If still too long after minimum font size, split into lines
                 let notesLines = [];
-                if (doc.getTextWidth(item.notes) > maxNotesWidth - 4) {
-                    notesLines = doc.splitTextToSize(item.notes, maxNotesWidth - 4);
+                if (doc.getTextWidth(item.notes) > notesWidth - 6) {
+                    notesLines = doc.splitTextToSize(item.notes, notesWidth - 6);
                 } else {
                     notesLines = [item.notes];
                 }
@@ -330,33 +331,30 @@ export function exportToPDF(programData, isThirdSunday) {
                 
                 // Ensure each line fits with the current font size
                 for (let line of notesLines.slice(0, notesLinesToShow)) {
-                    while (doc.getTextWidth(line) > maxNotesWidth - 4 && notesFontSize > 6) {
+                    while (doc.getTextWidth(line) > notesWidth - 6 && notesFontSize > 6) {
                         notesFontSize--;
                         doc.setFontSize(notesFontSize);
                         // Re-split text with new font size
                         if (notesLines.length > 1) {
-                            notesLines = doc.splitTextToSize(item.notes, maxNotesWidth - 4);
+                            notesLines = doc.splitTextToSize(item.notes, notesWidth - 6);
                         }
                     }
                 }
                 
-                // Calculate optimal height for notes box based on actual lines used
-                const lineHeight = notesFontSize * 1.25;
-                const notesHeight = Math.max(shapeSize * 2.4, notesLinesToShow * lineHeight + 6);
-                
-                // Draw the notes box
+                // Draw the notes box with consistent sizing
                 doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
-                doc.roundedRect(notesX, notesY, maxNotesWidth, notesHeight, 1.5, 1.5, 'F');
+                doc.roundedRect(notesX, notesY, notesWidth, notesHeight, 1.5, 1.5, 'F');
                 
                 // Center text perfectly in notes box with proper vertical alignment
                 if (notesLinesToShow === 1) {
                     // Single line - center vertically in the box
                     const lineWidth = doc.getTextWidth(notesLines[0]);
-                    const textX = notesX + (maxNotesWidth / 2) - (lineWidth / 2);
+                    const textX = notesX + (notesWidth / 2) - (lineWidth / 2);
                     const textY = notesY + (notesHeight / 2) + (notesFontSize * 0.25);
                     doc.text(notesLines[0], textX, textY);
                 } else {
                     // Multiple lines - center the text block vertically
+                    const lineHeight = notesFontSize * 1.25;
                     const totalTextHeight = notesLinesToShow * lineHeight;
                     const textStartY = notesY + (notesHeight / 2) - (totalTextHeight / 2) + (notesFontSize * 0.75);
                     
@@ -364,7 +362,7 @@ export function exportToPDF(programData, isThirdSunday) {
                         const line = notesLines[i];
                         const lineWidth = doc.getTextWidth(line);
                         // Center horizontally within the notes box
-                        const textX = notesX + (maxNotesWidth / 2) - (lineWidth / 2);
+                        const textX = notesX + (notesWidth / 2) - (lineWidth / 2);
                         doc.text(line, textX, textStartY + (i * lineHeight));
                     }
                 }
