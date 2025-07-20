@@ -72,6 +72,11 @@ export const AUTO_FILL_RULES = {
     band: {
         keywords: ['band'],
         default: { camera: '2', scene: '1', mic: 'Amb', notes: '' }
+    },
+    
+    benediction: {
+        keywords: ['benediction'],
+        default: { camera: '3', scene: '1', mic: 'Lectern', notes: '' }
     }
 };
 

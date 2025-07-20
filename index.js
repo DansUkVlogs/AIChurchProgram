@@ -52,6 +52,7 @@ window.clearInput = clearInput;
 window.exportToPDF = () => exportToPDF(programData, isThirdSunday);
 window.saveAsJSON = () => exportToJSON(programData, isThirdSunday);
 window.saveMissingInfo = saveMissingInfo;
+window.toggleModalTile = toggleModalTile;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
@@ -235,25 +236,31 @@ function showMissingInfoModal() {
         
         <div class="row">
             <div class="col-md-4 mb-3">
-                <label for="modalCamera" class="form-label">Camera</label>
-                <select class="form-select" id="modalCamera">
-                    <option value="">Select...</option>
-                    <option value="1" ${item.camera === '1' ? 'selected' : ''}>1</option>
-                    <option value="2" ${item.camera === '2' ? 'selected' : ''}>2</option>
-                    <option value="3" ${item.camera === '3' ? 'selected' : ''}>3</option>
-                    <option value="4" ${item.camera === '4' ? 'selected' : ''}>4</option>
-                    <option value="2/1" ${item.camera === '2/1' ? 'selected' : ''}>2/1</option>
-                </select>
+                <label class="form-label">Camera</label>
+                <div class="tile-container" id="modalCameraTiles">
+                    <div class="selection-tile ${item.camera === '1' || (item.camera && item.camera.includes('1')) ? 'selected' : ''}" 
+                         data-value="1" onclick="toggleModalTile(this, 'camera')">1</div>
+                    <div class="selection-tile ${item.camera === '2' || (item.camera && item.camera.includes('2')) ? 'selected' : ''}" 
+                         data-value="2" onclick="toggleModalTile(this, 'camera')">2</div>
+                    <div class="selection-tile ${item.camera === '3' || (item.camera && item.camera.includes('3')) ? 'selected' : ''}" 
+                         data-value="3" onclick="toggleModalTile(this, 'camera')">3</div>
+                    <div class="selection-tile ${item.camera === '4' || (item.camera && item.camera.includes('4')) ? 'selected' : ''}" 
+                         data-value="4" onclick="toggleModalTile(this, 'camera')">4</div>
+                </div>
+                <input type="hidden" id="modalCamera" value="${item.camera || ''}">
             </div>
             
             <div class="col-md-4 mb-3">
-                <label for="modalScene" class="form-label">Scene</label>
-                <select class="form-select" id="modalScene">
-                    <option value="">Select...</option>
-                    <option value="1" ${item.scene === '1' ? 'selected' : ''}>1</option>
-                    <option value="2" ${item.scene === '2' ? 'selected' : ''}>2</option>
-                    <option value="3" ${item.scene === '3' ? 'selected' : ''}>3</option>
-                </select>
+                <label class="form-label">Scene</label>
+                <div class="tile-container" id="modalSceneTiles">
+                    <div class="selection-tile ${item.scene === '1' || (item.scene && item.scene.includes('1')) ? 'selected' : ''}" 
+                         data-value="1" onclick="toggleModalTile(this, 'scene')">1</div>
+                    <div class="selection-tile ${item.scene === '2' || (item.scene && item.scene.includes('2')) ? 'selected' : ''}" 
+                         data-value="2" onclick="toggleModalTile(this, 'scene')">2</div>
+                    <div class="selection-tile ${item.scene === '3' || (item.scene && item.scene.includes('3')) ? 'selected' : ''}" 
+                         data-value="3" onclick="toggleModalTile(this, 'scene')">3</div>
+                </div>
+                <input type="hidden" id="modalScene" value="${item.scene || ''}">
             </div>
             
             <div class="col-md-4 mb-3">
@@ -261,6 +268,12 @@ function showMissingInfoModal() {
                 <input type="text" class="form-control" id="modalMic" value="${item.mic}" 
                        maxlength="${CONFIG.MAX_MIC_LENGTH}" placeholder="e.g., Lectern, Amb, 2,3,4">
             </div>
+        </div>
+        
+        <div class="mb-3">
+            <label for="modalNotes" class="form-label">Notes (Optional)</label>
+            <input type="text" class="form-control" id="modalNotes" value="${item.notes || ''}" 
+                   maxlength="${CONFIG.MAX_NOTES_LENGTH}" placeholder="Optional notes">
         </div>
         
         <div class="mb-3">
@@ -282,6 +295,7 @@ function saveMissingInfo() {
     const camera = document.getElementById('modalCamera')?.value;
     const scene = document.getElementById('modalScene')?.value;
     const mic = document.getElementById('modalMic')?.value;
+    const notes = document.getElementById('modalNotes')?.value.trim() || '';
     
     if (!camera || !scene || !mic) {
         showAlert('Please fill in all fields', 'warning');
@@ -291,6 +305,7 @@ function saveMissingInfo() {
     item.camera = camera;
     item.scene = scene;
     item.mic = mic;
+    item.notes = notes;
     
     const modal = bootstrap.Modal.getInstance(document.getElementById('missingInfoModal'));
     if (modal) modal.hide();
@@ -300,6 +315,36 @@ function saveMissingInfo() {
     setTimeout(() => {
         showMissingInfoModal();
     }, CONFIG.MODAL_TRANSITION_DELAY);
+}
+
+// Toggle tile selection in modal
+function toggleModalTile(tile, fieldType) {
+    const container = tile.parentElement;
+    const hiddenInput = document.getElementById(`modal${fieldType.charAt(0).toUpperCase() + fieldType.slice(1)}`);
+    
+    if (fieldType === 'camera') {
+        // Camera supports multi-select
+        tile.classList.toggle('selected');
+        
+        const selectedTiles = container.querySelectorAll('.selection-tile.selected');
+        const values = Array.from(selectedTiles).map(t => t.dataset.value);
+        
+        // Sort values to maintain consistent order (1,2,3,4)
+        values.sort((a, b) => parseInt(a) - parseInt(b));
+        
+        hiddenInput.value = values.length > 1 ? values.join('/') : (values[0] || '');
+    } else if (fieldType === 'scene') {
+        // Scene supports multi-select
+        tile.classList.toggle('selected');
+        
+        const selectedTiles = container.querySelectorAll('.selection-tile.selected');
+        const values = Array.from(selectedTiles).map(t => t.dataset.value);
+        
+        // Sort values to maintain consistent order (1,2,3)
+        values.sort((a, b) => parseInt(a) - parseInt(b));
+        
+        hiddenInput.value = values.length > 1 ? values.join('/') : (values[0] || '');
+    }
 }
 
 // Display results table

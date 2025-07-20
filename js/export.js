@@ -25,13 +25,32 @@ export function exportToPDF(programData, isThirdSunday) {
             notes: { r: 255, g: 193, b: 7 }       // Yellow (matches bg-warning)
         };
         
-        // Calculate dynamic sizing based on number of items
+        // Calculate dynamic sizing based on number of items - more aggressive scaling
         const itemCount = programData.length;
-        const availableHeight = 240; // Available height for content (reduced to allow more padding)
-        const baseRowHeight = Math.max(14, Math.min(18, availableHeight / (itemCount + 3))); // Larger base height
-        const maxRowHeight = baseRowHeight * 1.2; // Allow for 2-line content
-        const fontSize = Math.max(8, Math.min(11, baseRowHeight * 0.5)); // Larger font size
-        const shapeSize = Math.max(4, Math.min(6, baseRowHeight * 0.3)); // Larger shapes
+        const availableHeight = 235; // Available height for content
+        
+        // More aggressive scaling for larger programs
+        let baseRowHeight, fontSize, shapeSize;
+        if (itemCount <= 10) {
+            baseRowHeight = Math.max(16, Math.min(20, availableHeight / (itemCount + 3)));
+            fontSize = Math.max(9, Math.min(12, baseRowHeight * 0.5));
+            shapeSize = Math.max(5, Math.min(7, baseRowHeight * 0.3));
+        } else if (itemCount <= 15) {
+            baseRowHeight = Math.max(13, Math.min(16, availableHeight / (itemCount + 3)));
+            fontSize = Math.max(8, Math.min(10, baseRowHeight * 0.5));
+            shapeSize = Math.max(4, Math.min(6, baseRowHeight * 0.3));
+        } else if (itemCount <= 20) {
+            baseRowHeight = Math.max(11, Math.min(14, availableHeight / (itemCount + 3)));
+            fontSize = Math.max(7, Math.min(9, baseRowHeight * 0.5));
+            shapeSize = Math.max(3, Math.min(5, baseRowHeight * 0.3));
+        } else {
+            // For very large programs, use minimal spacing
+            baseRowHeight = Math.max(9, availableHeight / (itemCount + 3));
+            fontSize = Math.max(6, baseRowHeight * 0.5);
+            shapeSize = Math.max(2.5, baseRowHeight * 0.3);
+        }
+        
+        const maxRowHeight = baseRowHeight * 1.1; // Reduce multiplier for more items
         
         // Add title with styling
         doc.setFillColor(52, 58, 64); // Dark background
@@ -109,21 +128,57 @@ export function exportToPDF(programData, isThirdSunday) {
             // Calculate vertical center for all elements
             const rowCenterY = yPosition + (maxRowHeight / 2);
             
-            // Program item text (allow 2 lines if needed) - center vertically
+            // Program item text with smart scaling and truncation
             doc.setTextColor(0, 0, 0);
-            doc.setFontSize(fontSize);
+            let itemFontSize = fontSize;
+            doc.setFontSize(itemFontSize);
             const maxItemWidth = 65;
-            const lines = doc.splitTextToSize(item.programItem, maxItemWidth);
+            
+            // Start with original text and scale font down if needed
+            let textToShow = item.programItem;
+            let lines = doc.splitTextToSize(textToShow, maxItemWidth);
+            
+            // If text is too long, try smaller font first
+            while (lines.length > 2 && itemFontSize > fontSize * 0.7) {
+                itemFontSize -= 0.5;
+                doc.setFontSize(itemFontSize);
+                lines = doc.splitTextToSize(textToShow, maxItemWidth);
+            }
+            
+            // If still too long after font scaling, truncate text intelligently
+            if (lines.length > 2) {
+                // Try to find a good break point (space, comma, dash)
+                const maxChars = Math.floor(maxItemWidth / (itemFontSize * 0.6)) * 2; // Estimate chars for 2 lines
+                if (textToShow.length > maxChars) {
+                    // Look for break points near the max length
+                    const breakPoints = [' ', ',', '-', '&'];
+                    let truncateAt = maxChars - 3; // Leave room for "..."
+                    
+                    for (let i = truncateAt; i > maxChars * 0.7; i--) {
+                        if (breakPoints.includes(textToShow[i])) {
+                            truncateAt = i;
+                            break;
+                        }
+                    }
+                    
+                    textToShow = textToShow.substring(0, truncateAt).trim() + '...';
+                    lines = doc.splitTextToSize(textToShow, maxItemWidth);
+                }
+            }
+            
             const linesToShow = Math.min(2, lines.length);
             
             // Calculate starting Y to center the text block
-            const lineHeight = fontSize * 0.8;
+            const lineHeight = itemFontSize * 0.8;
             const totalTextHeight = linesToShow * lineHeight;
             const textStartY = rowCenterY - (totalTextHeight / 2) + lineHeight;
             
             for (let i = 0; i < linesToShow; i++) {
                 doc.text(lines[i], 22, textStartY + (i * lineHeight));
             }
+            
+            // Reset font size for other elements
+            doc.setFontSize(fontSize);
             
             // Camera with circle shape - perfectly centered
             const cameraX = 92;
@@ -305,13 +360,31 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFont(undefined, 'normal');
             doc.setFontSize(fontSize);
             yPosition += maxRowHeight;
+            
+            // Check if we're approaching page limits
+            if (yPosition > 275) {
+                console.warn(`Row ${index + 1} is at Y position ${yPosition}, approaching page limit`);
+            }
         });
+        
+        // Check if content fits and warn if necessary
+        const finalYPosition = yPosition;
+        const pageLimit = 280;
+        
+        if (finalYPosition > pageLimit) {
+            console.warn(`Content extends to Y position ${finalYPosition}, may be cut off (page limit: ${pageLimit})`);
+            // Add a note if content is cut off
+            doc.setFontSize(8);
+            doc.setTextColor(255, 0, 0); // Red warning text
+            doc.text('⚠ Some content may be cut off - consider reducing program length', 20, 275);
+        }
         
         // Add footer
         doc.setFontSize(7);
         doc.setTextColor(128, 128, 128);
-        doc.text('Generated by Church Program Smart Assistant', 20, 285);
-        doc.text(`Total Items: ${programData.length}`, 170, 285);
+        const footerY = Math.min(285, finalYPosition + 10); // Adjust footer position if needed
+        doc.text('Generated by Church Program Smart Assistant', 20, footerY);
+        doc.text(`Total Items: ${programData.length}`, 170, footerY);
         
         // Save the PDF
         doc.save(CONFIG.PDF_FILENAME);
