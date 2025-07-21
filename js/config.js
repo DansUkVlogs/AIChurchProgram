@@ -109,13 +109,23 @@ export const THEMES = {
 };
 
 // Example program data
-export const EXAMPLE_PROGRAM = `Opening Prayer
-SASB 123 Band
-Welcome & Announcements
-SOF 456 WG
-Bible Reading - John 3:16
+export const EXAMPLE_PROGRAM = `Welcome & Opening Prayer
+SASB 123 - Amazing Grace Band
+Announcements & Notices
+SOF 456 - Here I Am to Worship WG
+Children's Story - Emma
+SASB 234 - How Great Thou Art Piano
+Bible Reading - Romans 8:28-39
+Prayer for Healing
+Baptism Video Presentation
+SOF 567 - Blessed Be Your Name Band
 YP Spot - Youth Testimony
-Message - Pastor John
-Offering
-SASB 789
-Closing Prayer`;
+Special Music - Verity
+Message - The Power of Faith - Pastor David
+Call for Commitment
+SASB 345 - Just As I Am Piano
+Offering & Special Music
+Bible Study Invitation
+SASB 901 - Crown Him with Many Crowns WG
+Fellowship Time Announcement
+Closing Prayer - Elder Smith`;
