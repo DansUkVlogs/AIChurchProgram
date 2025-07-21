@@ -112,9 +112,9 @@ export function exportToPDF(programData, isThirdSunday) {
         doc.text('Program Item', 12, headerY + 5);
         doc.text('Cam', 75, headerY + 5);
         doc.text('Scene', 95, headerY + 5);
-        doc.text('Mic', 120, headerY + 5);
+        doc.text('Mic', 115, headerY + 5);
         doc.text('Stream', 145, headerY + 5);
-        doc.text('Notes', 185, headerY + 5);
+        doc.text('Notes', 165, headerY + 5);
         
         // Add horizontal line
         doc.setLineWidth(0.3);
@@ -258,9 +258,9 @@ export function exportToPDF(programData, isThirdSunday) {
             );
             
             // Mic with rounded rectangle shape - perfectly centered, single line only
-            const micX = 120;
+            const micX = 115;
             const micY = rowCenterY - (shapeSize * 1.2);
-            const micWidth = shapeSize * 3.0; // Smaller to fit tighter layout
+            const micWidth = shapeSize * 5.0; // Increased width for better text fitting
             const micHeight = shapeSize * 2.4; // Taller for better text
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
             doc.roundedRect(micX, micY, micWidth, micHeight, 1.5, 1.5, 'F');
@@ -285,7 +285,7 @@ export function exportToPDF(programData, isThirdSunday) {
             
             // Stream with rounded rectangle (if exists) - perfectly centered, single line only
             if (item.stream && item.stream.trim()) {
-                const streamX = 145;
+                const streamX = 140;
                 const streamY = rowCenterY - (shapeSize * 1.2);
                 const streamWidth = shapeSize * 3.5; // Width for stream text
                 const streamHeight = shapeSize * 2.4; // Same height as other boxes
@@ -313,9 +313,9 @@ export function exportToPDF(programData, isThirdSunday) {
             
             // Notes with rounded rectangle (if exists) - perfectly centered
             if (item.notes && item.notes.trim()) {
-                const notesX = 185;
+                const notesX = 165;
                 const notesY = rowCenterY - (shapeSize * 1.2);
-                const notesWidth = shapeSize * 3.5; // Adjusted width for notes to fit on page
+                const notesWidth = shapeSize * 10.0; // Extra wide for maximum text space
                 const notesHeight = shapeSize * 2.4; // Same height as other boxes
                 
                 // Notes text - use same font sizing logic as mic for consistency
@@ -360,17 +360,20 @@ export function exportToPDF(programData, isThirdSunday) {
                 doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
                 doc.roundedRect(notesX, notesY, notesWidth, notesHeight, 1.5, 1.5, 'F');
                 
-                // Center text perfectly in notes box with tighter line spacing
-                const lineSpacing = notesFontSize * 0.9; // Much tighter spacing to fit better
-                const totalHeight = notesLinesToShow * lineSpacing;
-                const startY = notesY + (notesHeight / 2) - (totalHeight / 2) + (notesFontSize * 0.6);
+                // Center text perfectly in notes box with proper vertical alignment
+                const lineSpacing = notesFontSize * 1.1; // Better line spacing
+                const totalTextHeight = notesLinesToShow * lineSpacing;
+                
+                // Calculate proper vertical center
+                const boxCenterY = notesY + (notesHeight / 2);
+                const textStartY = boxCenterY - (totalTextHeight / 2) + (lineSpacing / 2);
                 
                 for (let i = 0; i < notesLinesToShow; i++) {
                     const line = notesLines[i];
                     const lineWidth = doc.getTextWidth(line);
                     // Center horizontally within the notes box
                     const textX = notesX + (notesWidth / 2) - (lineWidth / 2);
-                    doc.text(line, textX, startY + (i * lineSpacing));
+                    doc.text(line, textX, textStartY + (i * lineSpacing));
                 }
             }
             

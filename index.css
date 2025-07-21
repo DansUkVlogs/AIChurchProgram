@@ -441,12 +441,12 @@ header {
     }
     
     /* Adjust column widths for mobile */
-    .table th:nth-child(1) { width: 35% !important; }
-    .table th:nth-child(2) { width: 12% !important; }
-    .table th:nth-child(3) { width: 12% !important; }
-    .table th:nth-child(4) { width: 15% !important; }
+    .table th:nth-child(1) { width: 30% !important; }
+    .table th:nth-child(2) { width: 10% !important; }
+    .table th:nth-child(3) { width: 10% !important; }
+    .table th:nth-child(4) { width: 12% !important; }
     .table th:nth-child(5) { width: 13% !important; }
-    .table th:nth-child(6) { width: 13% !important; }
+    .table th:nth-child(6) { width: 25% !important; }
     
     /* Badge adjustments */
     .badge {
@@ -540,12 +540,12 @@ header {
     }
     
     /* Adjust column widths for tablet */
-    .table th:nth-child(1) { width: 30% !important; }
-    .table th:nth-child(2) { width: 10% !important; }
-    .table th:nth-child(3) { width: 10% !important; }
-    .table th:nth-child(4) { width: 12% !important; }
+    .table th:nth-child(1) { width: 28% !important; }
+    .table th:nth-child(2) { width: 9% !important; }
+    .table th:nth-child(3) { width: 9% !important; }
+    .table th:nth-child(4) { width: 11% !important; }
     .table th:nth-child(5) { width: 13% !important; }
-    .table th:nth-child(6) { width: 15% !important; }
+    .table th:nth-child(6) { width: 20% !important; }
     .table th:nth-child(7) { width: 10% !important; }
     
     /* Badge adjustments */
