@@ -95,12 +95,12 @@ export function exportToPDF(programData, isThirdSunday) {
         // Stream legend (rounded rectangle)
         doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
         doc.roundedRect(115, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Stream', 123, 35);
+        doc.text('Stream: 1=YouTube, 2=Live', 123, 35);
         
         // Notes legend (rounded rectangle)
         doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
-        doc.roundedRect(150, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Notes', 158, 35);
+        doc.roundedRect(170, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Notes', 178, 35);
         
         // Add table headers with background - wider to accommodate all columns
         const headerY = 44;
@@ -114,7 +114,7 @@ export function exportToPDF(programData, isThirdSunday) {
         doc.text('Scene', 95, headerY + 5);
         doc.text('Mic', 120, headerY + 5);
         doc.text('Stream', 145, headerY + 5);
-        doc.text('Notes', 175, headerY + 5);
+        doc.text('Notes', 185, headerY + 5);
         
         // Add horizontal line
         doc.setLineWidth(0.3);
@@ -158,14 +158,14 @@ export function exportToPDF(programData, isThirdSunday) {
                 lines = doc.splitTextToSize(textToShow, maxItemWidth);
             }
             
-            // If still too long after font scaling, truncate text intelligently
+            // If still too long after font scaling, truncate text more aggressively
             if (lines.length > 2) {
                 // More aggressive truncation to prevent overflow
                 const maxChars = Math.floor(maxItemWidth / (itemFontSize * 0.55)) * 2; // More conservative estimate
                 if (textToShow.length > maxChars) {
                     // Look for break points near the max length
                     const breakPoints = [' ', ',', '-', '&', '(', ')'];
-                    let truncateAt = maxChars - 3; // Leave room for "..."
+                    let truncateAt = maxChars - 1; // Leave room for potential break
                     
                     for (let i = truncateAt; i > maxChars * 0.6; i--) {
                         if (breakPoints.includes(textToShow[i])) {
@@ -174,7 +174,7 @@ export function exportToPDF(programData, isThirdSunday) {
                         }
                     }
                     
-                    textToShow = textToShow.substring(0, truncateAt).trim() + '...';
+                    textToShow = textToShow.substring(0, truncateAt).trim();
                     lines = doc.splitTextToSize(textToShow, maxItemWidth);
                 }
             }
@@ -191,9 +191,10 @@ export function exportToPDF(programData, isThirdSunday) {
             for (let i = 0; i < linesToShow; i++) {
                 let lineText = lines[i];
                 
-                // Double-check line width and truncate if necessary
-                while (doc.getTextWidth(lineText) > maxItemWidth && lineText.length > 10) {
-                    lineText = lineText.substring(0, lineText.length - 4) + '...';
+                // Double-check line width and make font smaller if necessary
+                while (doc.getTextWidth(lineText) > maxItemWidth && itemFontSize > 4) {
+                    itemFontSize -= 0.2;
+                    doc.setFontSize(itemFontSize);
                 }
                 
                 doc.text(lineText, 12, textStartY + (i * lineHeight));
@@ -209,28 +210,18 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
             doc.circle(cameraX, cameraY, cameraRadius, 'F');
             
-            // Camera text - single line only, maximized font size
+            // Camera text - single line only, make font smaller to fit
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
             let cameraText = item.camera;
             let cameraFontSize = Math.min(16, cameraRadius * 2.2); // Start with larger size
             doc.setFontSize(cameraFontSize);
             
-            // Ensure text fits in circle on single line, truncate if necessary
+            // Make font smaller until text fits in circle
             const maxCameraWidth = cameraRadius * 1.6;
-            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraFontSize > 7) {
+            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraFontSize > 4) {
                 cameraFontSize--;
                 doc.setFontSize(cameraFontSize);
-            }
-            
-            // If still too wide, truncate text
-            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraText.length > 3) {
-                cameraText = cameraText.substring(0, cameraText.length - 1);
-            }
-            
-            // Add ellipsis if text was truncated
-            if (cameraText.length < item.camera.length && cameraText.length > 3) {
-                cameraText = cameraText.substring(0, cameraText.length - 3) + '...';
             }
             
             // Center text perfectly in circle with proper vertical alignment
@@ -245,28 +236,18 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
             doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
             
-            // Scene text - single line only, maximized font size
+            // Scene text - single line only, make font smaller to fit
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
             let sceneText = item.scene;
             let sceneFontSize = Math.min(16, shapeSize * 2.2); // Start with larger size
             doc.setFontSize(sceneFontSize);
             
-            // Ensure text fits in rectangle on single line, scale font or truncate
+            // Make font smaller until text fits in rectangle
             const maxSceneWidth = sceneWidth - 6;
-            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneFontSize > 7) {
+            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneFontSize > 4) {
                 sceneFontSize--;
                 doc.setFontSize(sceneFontSize);
-            }
-            
-            // If still too wide, truncate text
-            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneText.length > 3) {
-                sceneText = sceneText.substring(0, sceneText.length - 1);
-            }
-            
-            // Add ellipsis if text was truncated
-            if (sceneText.length < item.scene.length && sceneText.length > 3) {
-                sceneText = sceneText.substring(0, sceneText.length - 3) + '...';
             }
             
             // Center text perfectly in rectangle with proper vertical alignment
@@ -284,28 +265,18 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
             doc.roundedRect(micX, micY, micWidth, micHeight, 1.5, 1.5, 'F');
             
-            // Mic text - single line only, maximized font size
+            // Mic text - single line only, make font smaller to fit
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
             let micText = item.mic;
             let micFontSize = Math.min(16, shapeSize * 2.0); // Start with larger size
             doc.setFontSize(micFontSize);
             
-            // Ensure text fits in rectangle on single line, scale font or truncate
+            // Make font smaller until text fits in rectangle
             const maxMicWidth = micWidth - 6;
-            while (doc.getTextWidth(micText) > maxMicWidth && micFontSize > 6) {
+            while (doc.getTextWidth(micText) > maxMicWidth && micFontSize > 4) {
                 micFontSize--;
                 doc.setFontSize(micFontSize);
-            }
-            
-            // If still too wide, truncate text
-            while (doc.getTextWidth(micText) > maxMicWidth && micText.length > 3) {
-                micText = micText.substring(0, micText.length - 1);
-            }
-            
-            // Add ellipsis if text was truncated
-            if (micText.length < item.mic.length && micText.length > 3) {
-                micText = micText.substring(0, micText.length - 3) + '...';
             }
             
             // Center text perfectly in rectangle with proper vertical alignment
@@ -321,28 +292,18 @@ export function exportToPDF(programData, isThirdSunday) {
                 doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
                 doc.roundedRect(streamX, streamY, streamWidth, streamHeight, 1.5, 1.5, 'F');
                 
-                // Stream text - single line only, maximized font size
+                // Stream text - single line only, make font smaller to fit
                 doc.setTextColor(255, 255, 255);
                 doc.setFont(undefined, 'bold');
                 let streamText = item.stream;
                 let streamFontSize = Math.min(14, shapeSize * 1.8); // Smaller font for longer text
                 doc.setFontSize(streamFontSize);
                 
-                // Ensure text fits in rectangle on single line, scale font or truncate
+                // Make font smaller until text fits in rectangle
                 const maxStreamWidth = streamWidth - 6;
-                while (doc.getTextWidth(streamText) > maxStreamWidth && streamFontSize > 6) {
+                while (doc.getTextWidth(streamText) > maxStreamWidth && streamFontSize > 4) {
                     streamFontSize--;
                     doc.setFontSize(streamFontSize);
-                }
-                
-                // If still too wide, truncate text
-                while (doc.getTextWidth(streamText) > maxStreamWidth && streamText.length > 3) {
-                    streamText = streamText.substring(0, streamText.length - 1);
-                }
-                
-                // Add ellipsis if text was truncated
-                if (streamText.length < item.stream.length && streamText.length > 3) {
-                    streamText = streamText.substring(0, streamText.length - 3) + '...';
                 }
                 
                 // Center text perfectly in rectangle with proper vertical alignment
@@ -352,7 +313,7 @@ export function exportToPDF(programData, isThirdSunday) {
             
             // Notes with rounded rectangle (if exists) - perfectly centered
             if (item.notes && item.notes.trim()) {
-                const notesX = 175;
+                const notesX = 185;
                 const notesY = rowCenterY - (shapeSize * 1.2);
                 const notesWidth = shapeSize * 3.5; // Adjusted width for notes to fit on page
                 const notesHeight = shapeSize * 2.4; // Same height as other boxes

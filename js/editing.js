@@ -19,8 +19,8 @@ export function editField(index, field, programData, displayCallback) {
         inputHtml = `
             <select class="form-select form-select-sm" id="edit-${field}-${index}" style="min-width: 150px;">
                 <option value="">None</option>
-                <option value="Go Live" ${currentValue === 'Go Live' ? 'selected' : ''}>Go Live</option>
-                <option value="Go Live + YouTube" ${currentValue === 'Go Live + YouTube' ? 'selected' : ''}>Go Live + YouTube</option>
+                <option value="1" ${currentValue === '1' ? 'selected' : ''}>1 (Go Live + YouTube)</option>
+                <option value="2" ${currentValue === '2' ? 'selected' : ''}>2 (Go Live)</option>
             </select>
         `;
     } else if (field === 'mic') {
@@ -240,8 +240,8 @@ function createRowEditForm(item) {
                 <label for="editRowStream" class="form-label">Stream</label>
                 <select class="form-select" id="editRowStream">
                     <option value="">None</option>
-                    <option value="Go Live" ${item.stream === 'Go Live' ? 'selected' : ''}>Go Live</option>
-                    <option value="Go Live + YouTube" ${item.stream === 'Go Live + YouTube' ? 'selected' : ''}>Go Live + YouTube</option>
+                    <option value="1" ${item.stream === '1' ? 'selected' : ''}>1 (Go Live + YouTube)</option>
+                    <option value="2" ${item.stream === '2' ? 'selected' : ''}>2 (Go Live)</option>
                 </select>
             </div>
         </div>
@@ -375,10 +375,21 @@ function createNewRowForm() {
             </div>
         </div>
         
-        <div class="mb-3">
-            <label for="newRowNotes" class="form-label">Notes (Optional)</label>
-            <input type="text" class="form-control" id="newRowNotes" 
-                   maxlength="${CONFIG.MAX_NOTES_LENGTH}" placeholder="Optional notes">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <label for="newRowStream" class="form-label">Stream</label>
+                <select class="form-select" id="newRowStream">
+                    <option value="">None</option>
+                    <option value="1">1 (Go Live + YouTube)</option>
+                    <option value="2">2 (Go Live)</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <label for="newRowNotes" class="form-label">Notes (Optional)</label>
+                <input type="text" class="form-control" id="newRowNotes" 
+                       maxlength="${CONFIG.MAX_NOTES_LENGTH}" placeholder="Optional notes">
+            </div>
         </div>
     `;
 }
@@ -389,6 +400,7 @@ export function saveNewRow(programData, displayCallback) {
     const camera = document.getElementById('newRowCamera')?.value;
     const scene = document.getElementById('newRowScene')?.value;
     const mic = document.getElementById('newRowMic')?.value.trim();
+    const stream = document.getElementById('newRowStream')?.value || '';
     const notes = document.getElementById('newRowNotes')?.value.trim();
     
     if (!item || !camera || !scene || !mic) {
@@ -403,6 +415,7 @@ export function saveNewRow(programData, displayCallback) {
         camera: camera,
         scene: scene,
         mic: mic,
+        stream: stream,
         notes: notes
     };
     

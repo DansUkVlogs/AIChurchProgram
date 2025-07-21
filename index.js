@@ -273,8 +273,8 @@ function showMissingInfoModal() {
                 <label for="modalStream" class="form-label">Stream</label>
                 <select class="form-select" id="modalStream">
                     <option value="">None</option>
-                    <option value="Go Live" ${item.stream === 'Go Live' ? 'selected' : ''}>Go Live</option>
-                    <option value="Go Live + YouTube" ${item.stream === 'Go Live + YouTube' ? 'selected' : ''}>Go Live + YouTube</option>
+                    <option value="1" ${item.stream === '1' ? 'selected' : ''}>1 (Go Live + YouTube)</option>
+                    <option value="2" ${item.stream === '2' ? 'selected' : ''}>2 (Go Live)</option>
                 </select>
             </div>
         </div>
@@ -371,6 +371,13 @@ function displayResults() {
         row.style.animationDelay = `${index * CONFIG.ANIMATION_DELAY}ms`;
         row.id = `row-${index}`;
         
+        // Helper function to display stream value
+        const getStreamDisplay = (stream) => {
+            if (stream === '1') return '1 (Go Live + YouTube)';
+            if (stream === '2') return '2 (Go Live)';
+            return stream || 'Add stream...';
+        };
+        
         row.innerHTML = `
             <td class="fw-medium">${item.programItem}</td>
             <td>
@@ -383,7 +390,7 @@ function displayResults() {
                 <span class="badge bg-success editable-field" data-field="mic" data-index="${index}" onclick="window.editField(${index}, 'mic')">${item.mic}</span>
             </td>
             <td>
-                <span class="badge bg-info editable-field ${item.stream ? '' : 'text-muted'}" data-field="stream" data-index="${index}" onclick="window.editField(${index}, 'stream')">${item.stream || 'Add stream...'}</span>
+                <span class="badge bg-info editable-field ${item.stream ? '' : 'text-muted'}" data-field="stream" data-index="${index}" onclick="window.editField(${index}, 'stream')">${getStreamDisplay(item.stream)}</span>
             </td>
             <td>
                 <span class="badge bg-warning editable-field ${item.notes ? '' : 'text-muted'}" data-field="notes" data-index="${index}" onclick="window.editField(${index}, 'notes')">${item.notes || 'Add notes...'}</span>
