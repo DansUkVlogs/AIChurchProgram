@@ -289,6 +289,70 @@ header {
     font-size: 0.875rem;
 }
 
+/* Tile selection styling */
+.tile-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.selection-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 3rem;
+    min-height: 3rem;
+    padding: 0.5rem;
+    border: 2px solid #dee2e6;
+    border-radius: 0.5rem;
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    user-select: none;
+}
+
+.selection-tile:hover {
+    border-color: var(--secondary-color);
+    background-color: rgba(52, 152, 219, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.selection-tile.selected {
+    border-color: var(--secondary-color);
+    background-color: var(--secondary-color);
+    color: white;
+    box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+}
+
+.selection-tile.selected:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+
+/* Dark theme tile styling */
+[data-theme="dark"] .selection-tile {
+    background-color: var(--dark-bg);
+    border-color: #495057;
+    color: #fff;
+}
+
+[data-theme="dark"] .selection-tile:hover {
+    border-color: var(--secondary-color);
+    background-color: rgba(52, 152, 219, 0.2);
+}
+
+[data-theme="dark"] .selection-tile.selected {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: white;
+}
+
 /* Responsive table adjustments */
 @media (max-width: 768px) {
     .table td .btn {
