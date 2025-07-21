@@ -75,6 +75,9 @@
                         <button class="btn btn-light btn-sm me-2" onclick="toggleTheme()">
                             <i class="fas fa-moon" id="themeIcon"></i>
                         </button>
+                        <button class="btn btn-info btn-sm me-2" data-bs-toggle="modal" data-bs-target="#helpModal">
+                            <i class="fas fa-question-circle me-1"></i>Help
+                        </button>
                         <div class="form-check form-switch d-inline-block">
                             <input class="form-check-input" type="checkbox" id="thirdSundayToggle">
                             <label class="form-check-label text-white" for="thirdSundayToggle">
@@ -167,6 +170,200 @@
                             </table>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Church Program Smart Assistant - Help Guide
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="accordion" id="helpAccordion">
+                        <!-- Overview Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="overviewHeading">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#overviewCollapse">
+                                    <i class="fas fa-info-circle me-2"></i>Overview
+                                </button>
+                            </h2>
+                            <div id="overviewCollapse" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p>The Church Program Smart Assistant automatically fills in technical settings for your church service program items. Simply paste your program, and it will detect song types, readings, messages, and other items to suggest appropriate camera, scene, microphone, and streaming settings.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Camera Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="cameraHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cameraCollapse">
+                                    <i class="fas fa-video me-2 text-primary"></i>Camera
+                                </button>
+                            </h2>
+                            <div id="cameraCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Camera</strong> refers to which camera position/angle will be used during each program item:</p>
+                                    <ul>
+                                        <li><strong>Camera 1:</strong> Wide shot, typically for videos, presentations, or congregation views</li>
+                                        <li><strong>Camera 2:</strong> Band/worship team area, used for group music performances</li>
+                                        <li><strong>Camera 3:</strong> Platform/stage area, used for individual performers, piano, testimonies</li>
+                                        <li><strong>Camera 4:</strong> Lectern/pulpit area, used for speakers, messages, prayers</li>
+                                    </ul>
+                                    <p>Multiple cameras can be selected (e.g., "2/1" means use Camera 2 primarily, Camera 1 as backup).</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scene Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="sceneHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sceneCollapse">
+                                    <i class="fas fa-desktop me-2 text-secondary"></i>Scene
+                                </button>
+                            </h2>
+                            <div id="sceneCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Scene</strong> determines the visual layout and graphics overlay for the live stream:</p>
+                                    <ul>
+                                        <li><strong>Scene 1:</strong> Standard service scene with church branding and lower thirds</li>
+                                        <li><strong>Scene 2:</strong> Special event scene, often used for testimonies, announcements</li>
+                                        <li><strong>Scene 3:</strong> Message/sermon scene with minimal graphics for focus on speaker</li>
+                                    </ul>
+                                    <p>Scene selection affects what viewers see on the live stream and any recordings.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Microphone Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="micHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#micCollapse">
+                                    <i class="fas fa-microphone me-2 text-success"></i>Microphone
+                                </button>
+                            </h2>
+                            <div id="micCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Microphone</strong> specifies which audio input will be used:</p>
+                                    <ul>
+                                        <li><strong>Lectern:</strong> Fixed microphone at the lectern/pulpit</li>
+                                        <li><strong>Handheld:</strong> Wireless handheld microphone</li>
+                                        <li><strong>Headset:</strong> Wireless headset microphone</li>
+                                        <li><strong>Amb:</strong> Ambient/room microphones for general pickup</li>
+                                        <li><strong>AV:</strong> Audio/Video system input (for videos, presentations)</li>
+                                        <li><strong>2,3,4:</strong> Specific numbered microphones (e.g., for band members)</li>
+                                    </ul>
+                                    <p>Multiple mics can be used (e.g., "2,3,4" for a worship group with three mics).</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stream Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="streamHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#streamCollapse">
+                                    <i class="fas fa-broadcast-tower me-2 text-info"></i>Stream
+                                </button>
+                            </h2>
+                            <div id="streamCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Stream</strong> indicates which Stream Deck button to press for live streaming:</p>
+                                    <ul>
+                                        <li><strong>1:</strong> "Go Live + YouTube" - Streams to both church platform and YouTube simultaneously</li>
+                                        <li><strong>2:</strong> "Go Live" - Streams only to the main church platform</li>
+                                    </ul>
+                                    <p><strong>When to use each:</strong></p>
+                                    <ul>
+                                        <li><strong>Use "1" (Go Live + YouTube) for:</strong> Songs, Bible readings, band performances, special music</li>
+                                        <li><strong>Use "2" (Go Live only) for:</strong> Announcements, prayers, messages, general service items</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="notesHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#notesCollapse">
+                                    <i class="fas fa-sticky-note me-2 text-warning"></i>Notes
+                                </button>
+                            </h2>
+                            <div id="notesCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Notes</strong> field is for additional information or reminders:</p>
+                                    <ul>
+                                        <li>Special instructions for tech team</li>
+                                        <li>Timing notes</li>
+                                        <li>Equipment requirements</li>
+                                        <li>Any other relevant details</li>
+                                    </ul>
+                                    <p>This field is optional and will appear in the exported PDF for reference.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3rd Sunday Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="thirdSundayHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#thirdSundayCollapse">
+                                    <i class="fas fa-calendar-alt me-2 text-primary"></i>3rd Sunday Mode
+                                </button>
+                            </h2>
+                            <div id="thirdSundayCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>3rd Sunday</strong> mode adjusts settings for special third Sunday services:</p>
+                                    <ul>
+                                        <li>Bible readings may use different camera positions (Camera 2 instead of 4)</li>
+                                        <li>Youth activities may use handheld mics instead of headsets</li>
+                                        <li>Different microphone assignments for some activities</li>
+                                    </ul>
+                                    <p>Toggle this on if your service is on the third Sunday of the month and follows special procedures.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Usage Tips Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="tipsHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tipsCollapse">
+                                    <i class="fas fa-lightbulb me-2 text-warning"></i>Usage Tips
+                                </button>
+                            </h2>
+                            <div id="tipsCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>For best results:</strong></p>
+                                    <ul>
+                                        <li>Include performer names (e.g., "SASB 123 Band", "SOF 456 WG")</li>
+                                        <li>Specify song numbers when available</li>
+                                        <li>Use consistent naming (Band, WG, Piano, etc.)</li>
+                                        <li>One program item per line</li>
+                                        <li>Maximum 20 lines per program</li>
+                                    </ul>
+                                    <p><strong>Auto-detection works for:</strong></p>
+                                    <ul>
+                                        <li>SASB/SOF songs with numbers</li>
+                                        <li>Bible readings</li>
+                                        <li>Messages/sermons</li>
+                                        <li>Prayers</li>
+                                        <li>Announcements</li>
+                                        <li>YP spots</li>
+                                        <li>Band, WG, Piano performances</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
