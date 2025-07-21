@@ -19,15 +19,19 @@ export function applyAutoFillLogic(item, isThirdSunday = false) {
         if (parsedInfo.performer === 'piano' || text.includes('piano')) {
             // Piano songs - specific camera and settings
             Object.assign(item, AUTO_FILL_RULES.songs.piano);
+            item.stream = 'Go Live + YouTube'; // Songs get YouTube streaming
         } else if (parsedInfo.performer === 'wg' || parsedInfo.performer === 'worship group' || text.includes('wg') || text.includes('worship group')) {
             // WG Songs
             Object.assign(item, AUTO_FILL_RULES.songs.wg);
+            item.stream = 'Go Live + YouTube'; // Songs get YouTube streaming
         } else if (parsedInfo.performer === 'band' || text.includes('band')) {
             // Band songs
             Object.assign(item, AUTO_FILL_RULES.band.default);
+            item.stream = 'Go Live + YouTube'; // Songs get YouTube streaming
         } else {
             // Regular songs
             Object.assign(item, AUTO_FILL_RULES.songs.default);
+            item.stream = 'Go Live + YouTube'; // Songs get YouTube streaming
         }
     }
     // Offering
@@ -39,10 +43,12 @@ export function applyAutoFillLogic(item, isThirdSunday = false) {
             // Offering only
             Object.assign(item, AUTO_FILL_RULES.offering.default);
         }
+        item.stream = 'Go Live'; // Default Go Live for everything else
     }
     // Announcements only
     else if (containsAny(text, AUTO_FILL_RULES.announcements.keywords)) {
         Object.assign(item, AUTO_FILL_RULES.announcements.default);
+        item.stream = 'Go Live'; // Default Go Live for everything else
     }
     // YP Spot
     else if (containsAny(text, AUTO_FILL_RULES.ypSpot.keywords)) {
@@ -51,6 +57,7 @@ export function applyAutoFillLogic(item, isThirdSunday = false) {
         } else {
             Object.assign(item, AUTO_FILL_RULES.ypSpot.default);
         }
+        item.stream = 'Go Live'; // Default Go Live for everything else
     }
     // Bible Reading
     else if (containsAny(text, AUTO_FILL_RULES.bibleReading.keywords)) {
@@ -59,22 +66,27 @@ export function applyAutoFillLogic(item, isThirdSunday = false) {
         } else {
             Object.assign(item, AUTO_FILL_RULES.bibleReading.default);
         }
+        item.stream = 'Go Live + YouTube'; // Bible readings get YouTube streaming
     }
     // Benediction
     else if (containsAny(text, AUTO_FILL_RULES.benediction.keywords)) {
         Object.assign(item, AUTO_FILL_RULES.benediction.default);
+        item.stream = 'Go Live'; // Default Go Live for everything else
     }
     // Message/Sermon
     else if (containsAny(text, AUTO_FILL_RULES.message.keywords)) {
         Object.assign(item, AUTO_FILL_RULES.message.default);
+        item.stream = 'Go Live'; // Default Go Live for everything else
     }
     // Prayer
     else if (containsAny(text, AUTO_FILL_RULES.prayer.keywords)) {
         Object.assign(item, AUTO_FILL_RULES.prayer.default);
+        item.stream = 'Go Live'; // Default Go Live for everything else
     }
     // Band specific
     else if (containsAny(text, AUTO_FILL_RULES.band.keywords)) {
         Object.assign(item, AUTO_FILL_RULES.band.default);
+        item.stream = 'Go Live + YouTube'; // Band performances get YouTube streaming
     }
     // Enhanced detection based on parsed information
     else if (parsedInfo.itemType) {
@@ -85,8 +97,9 @@ export function applyAutoFillLogic(item, isThirdSunday = false) {
             item._isUnmatched = true; // Internal flag for tracking
         }
     }
-    // If no matches found, leave blank for user input
+    // If no matches found, set default Go Live for user input
     else {
+        item.stream = 'Go Live'; // Default Go Live for everything else
         item._isUnmatched = true; // Internal flag for tracking
     }
     
@@ -100,7 +113,8 @@ function parseItemText(text) {
         songNumber: null,
         itemType: null,
         performer: null,
-        hasVideo: false
+        hasVideo: false,
+        hasScreen: false
     };
     
     // Extract song numbers (SOF 123, SASB 456, etc.)
@@ -130,6 +144,9 @@ function parseItemText(text) {
     if (text.toLowerCase().includes('video') || text.includes('https://') || text.includes('youtube')) {
         info.hasVideo = true;
         info.itemType = 'video';
+    } else if (text.toLowerCase().includes('ppt') || text.toLowerCase().includes('powerpoint') || text.toLowerCase().includes('slides')) {
+        info.hasScreen = true;
+        info.itemType = 'presentation';
     } else if (text.toLowerCase().includes('welcome')) {
         info.itemType = 'welcome';
     } else if (text.toLowerCase().includes('prayer')) {
@@ -138,6 +155,7 @@ function parseItemText(text) {
         info.itemType = 'message';
     } else if (text.toLowerCase().includes('reading')) {
         info.itemType = 'reading';
+        info.hasScreen = true; // Bible readings typically use screens
     } else if (text.toLowerCase().includes('announcement')) {
         info.itemType = 'announcements';
     } else if (text.toLowerCase().includes('offering')) {
@@ -150,31 +168,36 @@ function parseItemText(text) {
 // Detect settings based on parsed item type and performer
 function detectByItemType(parsedInfo, isThirdSunday) {
     if (parsedInfo.hasVideo) {
-        return { camera: '1', scene: '1', mic: 'AV', notes: '' };
+        return { camera: '1', scene: '1', mic: 'AV', stream: 'Go Live', notes: '' };
+    }
+    
+    // Handle screen items (PPT, presentations, etc.)
+    if (parsedInfo.hasScreen || parsedInfo.itemType === 'presentation') {
+        return { camera: '1', scene: '1', mic: 'AV', stream: 'Go Live', notes: '' };
     }
     
     switch (parsedInfo.itemType) {
         case 'welcome':
-            return { camera: '3', scene: '1', mic: '2', notes: '' };
+            return { camera: '3', scene: '1', mic: '2', stream: 'Go Live', notes: '' };
         case 'prayer':
-            return { camera: '4', scene: '1', mic: 'Lectern', notes: '' };
+            return { camera: '4', scene: '1', mic: 'Lectern', stream: 'Go Live', notes: '' };
         case 'message':
-            return { camera: '4', scene: '3', mic: 'Lectern', notes: '' };
+            return { camera: '4', scene: '3', mic: 'Lectern', stream: 'Go Live', notes: '' };
         case 'reading':
             if (isThirdSunday) {
-                return { camera: '2', scene: '1', mic: '2', notes: '' };
+                return { camera: '2', scene: '1', mic: '2', stream: 'Go Live + YouTube', notes: '' };
             }
-            return { camera: '4', scene: '1', mic: 'Lectern', notes: '' };
+            return { camera: '4', scene: '1', mic: 'Lectern', stream: 'Go Live + YouTube', notes: '' };
         case 'announcements':
-            return { camera: '4', scene: '1', mic: 'Lectern', notes: '' };
+            return { camera: '4', scene: '1', mic: 'Lectern', stream: 'Go Live', notes: '' };
         case 'offering':
-            return { camera: '1', scene: '1', mic: 'AV', notes: '' };
+            return { camera: '1', scene: '1', mic: 'AV', stream: 'Go Live', notes: '' };
         case 'singing company':
-            return { camera: '3', scene: '1', mic: 'Amb', notes: '' };
+            return { camera: '3', scene: '1', mic: 'Amb', stream: 'Go Live + YouTube', notes: '' };
         case 's/coy':
-            return { camera: '3', scene: '1', mic: 'Amb', notes: '' };
+            return { camera: '3', scene: '1', mic: 'Amb', stream: 'Go Live + YouTube', notes: '' };
         case 'video':
-            return { camera: '1', scene: '1', mic: 'AV', notes: '' };
+            return { camera: '1', scene: '1', mic: 'AV', stream: 'Go Live', notes: '' };
 
     }
     
@@ -183,15 +206,15 @@ function detectByItemType(parsedInfo, isThirdSunday) {
         switch (parsedInfo.performer) {
             case 'wg':
             case 'worship group':
-                return { camera: '2', scene: '1', mic: '2,3,4', notes: '' };
+                return { camera: '2', scene: '1', mic: '2,3,4', stream: 'Go Live + YouTube', notes: '' };
             case 'band':
-                return { camera: '2', scene: '1', mic: 'Amb', notes: '' };
+                return { camera: '2', scene: '1', mic: 'Amb', stream: 'Go Live + YouTube', notes: '' };
             case 'piano':
-                return { camera: '3', scene: '1', mic: 'Amb', notes: '' };
+                return { camera: '3', scene: '1', mic: 'Amb', stream: 'Go Live + YouTube', notes: '' };
             case 'handheld':
-                return { camera: '3', scene: '2', mic: 'Handheld', notes: '' };
+                return { camera: '3', scene: '2', mic: 'Handheld', stream: 'Go Live', notes: '' };
             case 'lectern':
-                return { camera: '4', scene: '1', mic: 'Lectern', notes: '' };
+                return { camera: '4', scene: '1', mic: 'Lectern', stream: 'Go Live', notes: '' };
         }
     }
     

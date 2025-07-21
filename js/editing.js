@@ -15,6 +15,14 @@ export function editField(index, field, programData, displayCallback) {
         inputHtml = createSelectInput(field, index, currentValue, FORM_OPTIONS.camera);
     } else if (field === 'scene') {
         inputHtml = createSelectInput(field, index, currentValue, FORM_OPTIONS.scene);
+    } else if (field === 'stream') {
+        inputHtml = `
+            <select class="form-select form-select-sm" id="edit-${field}-${index}" style="min-width: 150px;">
+                <option value="">None</option>
+                <option value="Go Live" ${currentValue === 'Go Live' ? 'selected' : ''}>Go Live</option>
+                <option value="Go Live + YouTube" ${currentValue === 'Go Live + YouTube' ? 'selected' : ''}>Go Live + YouTube</option>
+            </select>
+        `;
     } else if (field === 'mic') {
         inputHtml = `
             <input type="text" class="form-control form-control-sm" id="edit-${field}-${index}" 
@@ -95,8 +103,8 @@ export function saveField(index, field, programData, displayCallback) {
     
     const newValue = input.value.trim();
     
-    // Notes field can be empty, but other fields cannot
-    if (!newValue && field !== 'notes') {
+    // Notes and stream fields can be empty, but other fields cannot
+    if (!newValue && field !== 'notes' && field !== 'stream') {
         showAlert('Field cannot be empty', 'warning');
         return;
     }
@@ -139,6 +147,7 @@ function getBadgeClass(field) {
         camera: 'bg-primary',
         scene: 'bg-secondary',
         mic: 'bg-success',
+        stream: 'bg-info',
         notes: 'bg-warning'
     };
     return classes[field] || 'bg-secondary';
@@ -205,7 +214,7 @@ function createRowEditForm(item) {
         </div>
         
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">Camera</label>
                 <div class="tile-container" id="editRowCameraTiles">
                     ${cameraTiles}
@@ -213,7 +222,7 @@ function createRowEditForm(item) {
                 <input type="hidden" id="editRowCamera" value="${item.camera}">
             </div>
             
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">Scene</label>
                 <div class="tile-container" id="editRowSceneTiles">
                     ${sceneTiles}
@@ -221,10 +230,19 @@ function createRowEditForm(item) {
                 <input type="hidden" id="editRowScene" value="${item.scene}">
             </div>
             
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="editRowMic" class="form-label">Mic</label>
                 <input type="text" class="form-control" id="editRowMic" value="${item.mic}" 
                        maxlength="${CONFIG.MAX_MIC_LENGTH}" placeholder="e.g., Lectern, Amb, 2,3,4">
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label for="editRowStream" class="form-label">Stream</label>
+                <select class="form-select" id="editRowStream">
+                    <option value="">None</option>
+                    <option value="Go Live" ${item.stream === 'Go Live' ? 'selected' : ''}>Go Live</option>
+                    <option value="Go Live + YouTube" ${item.stream === 'Go Live + YouTube' ? 'selected' : ''}>Go Live + YouTube</option>
+                </select>
             </div>
         </div>
         
@@ -241,6 +259,7 @@ export function saveRowEdit(index, programData, displayCallback) {
     const camera = document.getElementById('editRowCamera')?.value;
     const scene = document.getElementById('editRowScene')?.value;
     const mic = document.getElementById('editRowMic')?.value;
+    const stream = document.getElementById('editRowStream')?.value;
     const notes = document.getElementById('editRowNotes')?.value;
     
     if (!camera || !scene || !mic) {
@@ -252,6 +271,7 @@ export function saveRowEdit(index, programData, displayCallback) {
     programData[index].camera = camera;
     programData[index].scene = scene;
     programData[index].mic = mic;
+    programData[index].stream = stream || '';
     programData[index].notes = notes;
     
     // Close modal

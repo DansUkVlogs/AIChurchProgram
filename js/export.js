@@ -22,6 +22,7 @@ export function exportToPDF(programData, isThirdSunday) {
             camera: { r: 0, g: 123, b: 255 },     // Blue (matches bg-primary)
             scene: { r: 108, g: 117, b: 125 },    // Gray (matches bg-secondary)  
             mic: { r: 25, g: 135, b: 84 },        // Green (matches bg-success)
+            stream: { r: 13, g: 202, b: 240 },    // Cyan (matches bg-info)
             notes: { r: 255, g: 193, b: 7 }       // Yellow (matches bg-warning)
         };
         
@@ -77,41 +78,47 @@ export function exportToPDF(programData, isThirdSunday) {
         
         // Camera legend (circle)
         doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
-        doc.circle(35, 33, 2, 'F');
+        doc.circle(30, 33, 2, 'F');
         doc.setTextColor(0, 0, 0);
-        doc.text('Camera', 40, 35);
+        doc.text('Camera', 35, 35);
         
         // Scene legend (rectangle)
         doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
-        doc.rect(65, 31, 4, 4, 'F');
-        doc.text('Scene', 71, 35);
+        doc.rect(62, 31, 4, 4, 'F');
+        doc.text('Scene', 68, 35);
         
         // Mic legend (rounded rectangle - changed from triangle)
         doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
-        doc.roundedRect(92, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Mic', 100, 35);
+        doc.roundedRect(89, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Mic', 97, 35);
+        
+        // Stream legend (rounded rectangle)
+        doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
+        doc.roundedRect(115, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Stream', 123, 35);
         
         // Notes legend (rounded rectangle)
         doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
-        doc.roundedRect(125, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Notes', 134, 35);
+        doc.roundedRect(150, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Notes', 158, 35);
         
-        // Add table headers with background
+        // Add table headers with background - wider to accommodate all columns
         const headerY = 44;
         doc.setFillColor(248, 249, 250); // Light gray background
-        doc.rect(20, headerY, 170, 8, 'F');
+        doc.rect(10, headerY, 190, 8, 'F');
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont(undefined, 'bold');
-        doc.text('Program Item', 22, headerY + 5);
-        doc.text('Camera', 90, headerY + 5);
-        doc.text('Scene', 115, headerY + 5);
-        doc.text('Mic', 140, headerY + 5);
-        doc.text('Notes', 165, headerY + 5);
+        doc.text('Program Item', 12, headerY + 5);
+        doc.text('Cam', 75, headerY + 5);
+        doc.text('Scene', 95, headerY + 5);
+        doc.text('Mic', 120, headerY + 5);
+        doc.text('Stream', 145, headerY + 5);
+        doc.text('Notes', 175, headerY + 5);
         
         // Add horizontal line
         doc.setLineWidth(0.3);
-        doc.line(20, headerY + 8, 190, headerY + 8);
+        doc.line(10, headerY + 8, 200, headerY + 8);
         
         // Add data rows with enhanced styling - all on one page
         doc.setFont(undefined, 'normal');
@@ -125,7 +132,7 @@ export function exportToPDF(programData, isThirdSunday) {
             // Only add subtle alternating background if it won't interfere
             if (index % 2 === 0 && maxRowHeight > 12) {
                 doc.setFillColor(254, 254, 254); // Very light gray, less intrusive
-                doc.rect(20, yPosition - 1, 170, maxRowHeight - 2, 'F');
+                doc.rect(10, yPosition - 1, 190, maxRowHeight - 2, 'F');
             }
             
             // Program item text with smart scaling, cleaning, and wrapping
@@ -139,7 +146,7 @@ export function exportToPDF(programData, isThirdSunday) {
                 .trim();               // Remove leading/trailing spaces
             
             // More restrictive width to ensure no overflow into shapes
-            const maxItemWidth = 60; // Reduced from 65 to prevent overflow
+            const maxItemWidth = 55; // Reduced to accommodate more columns
             
             // Force line breaks - don't let text overflow
             let lines = doc.splitTextToSize(textToShow, maxItemWidth);
@@ -189,16 +196,16 @@ export function exportToPDF(programData, isThirdSunday) {
                     lineText = lineText.substring(0, lineText.length - 4) + '...';
                 }
                 
-                doc.text(lineText, 22, textStartY + (i * lineHeight));
+                doc.text(lineText, 12, textStartY + (i * lineHeight));
             }
             
             // Reset font size for other elements
             doc.setFontSize(fontSize);
             
             // Camera with circle shape - perfectly centered, single line only
-            const cameraX = 92;
+            const cameraX = 77;
             const cameraY = rowCenterY;
-            const cameraRadius = shapeSize * 1.3; // Larger circle for better readability
+            const cameraRadius = shapeSize * 1.2; // Slightly smaller to fit tighter layout
             doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
             doc.circle(cameraX, cameraY, cameraRadius, 'F');
             
@@ -231,9 +238,9 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.text(cameraText, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.25));
             
             // Scene with rectangle shape - perfectly centered, single line only
-            const sceneX = 115;
+            const sceneX = 95;
             const sceneY = rowCenterY - (shapeSize * 1.2);
-            const sceneWidth = shapeSize * 3.5; // Larger for better text space
+            const sceneWidth = shapeSize * 3.0; // Smaller to fit tighter layout
             const sceneHeight = shapeSize * 2.4; // Taller for better text
             doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
             doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
@@ -270,9 +277,9 @@ export function exportToPDF(programData, isThirdSunday) {
             );
             
             // Mic with rounded rectangle shape - perfectly centered, single line only
-            const micX = 140;
+            const micX = 120;
             const micY = rowCenterY - (shapeSize * 1.2);
-            const micWidth = shapeSize * 3.8 * 1.5; // Wider for better text space
+            const micWidth = shapeSize * 3.0; // Smaller to fit tighter layout
             const micHeight = shapeSize * 2.4; // Taller for better text
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
             doc.roundedRect(micX, micY, micWidth, micHeight, 1.5, 1.5, 'F');
@@ -305,12 +312,50 @@ export function exportToPDF(programData, isThirdSunday) {
             const micTextWidth = doc.getTextWidth(micText);
             doc.text(micText, micX + (micWidth / 2) - (micTextWidth / 2), micY + (micHeight / 2) + (micFontSize * 0.25));
             
+            // Stream with rounded rectangle (if exists) - perfectly centered, single line only
+            if (item.stream && item.stream.trim()) {
+                const streamX = 145;
+                const streamY = rowCenterY - (shapeSize * 1.2);
+                const streamWidth = shapeSize * 3.5; // Width for stream text
+                const streamHeight = shapeSize * 2.4; // Same height as other boxes
+                doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
+                doc.roundedRect(streamX, streamY, streamWidth, streamHeight, 1.5, 1.5, 'F');
+                
+                // Stream text - single line only, maximized font size
+                doc.setTextColor(255, 255, 255);
+                doc.setFont(undefined, 'bold');
+                let streamText = item.stream;
+                let streamFontSize = Math.min(14, shapeSize * 1.8); // Smaller font for longer text
+                doc.setFontSize(streamFontSize);
+                
+                // Ensure text fits in rectangle on single line, scale font or truncate
+                const maxStreamWidth = streamWidth - 6;
+                while (doc.getTextWidth(streamText) > maxStreamWidth && streamFontSize > 6) {
+                    streamFontSize--;
+                    doc.setFontSize(streamFontSize);
+                }
+                
+                // If still too wide, truncate text
+                while (doc.getTextWidth(streamText) > maxStreamWidth && streamText.length > 3) {
+                    streamText = streamText.substring(0, streamText.length - 1);
+                }
+                
+                // Add ellipsis if text was truncated
+                if (streamText.length < item.stream.length && streamText.length > 3) {
+                    streamText = streamText.substring(0, streamText.length - 3) + '...';
+                }
+                
+                // Center text perfectly in rectangle with proper vertical alignment
+                const streamTextWidth = doc.getTextWidth(streamText);
+                doc.text(streamText, streamX + (streamWidth / 2) - (streamTextWidth / 2), streamY + (streamHeight / 2) + (streamFontSize * 0.25));
+            }
+            
             // Notes with rounded rectangle (if exists) - perfectly centered
             if (item.notes && item.notes.trim()) {
-                const notesX = 162;
+                const notesX = 175;
                 const notesY = rowCenterY - (shapeSize * 1.2);
-                const notesWidth = shapeSize * 11; // Even longer for maximum text space
-                const notesHeight = shapeSize * 2.4; // Same height as mic box for consistency
+                const notesWidth = shapeSize * 3.5; // Adjusted width for notes to fit on page
+                const notesHeight = shapeSize * 2.4; // Same height as other boxes
                 
                 // Notes text - use same font sizing logic as mic for consistency
                 doc.setTextColor(0, 0, 0);
@@ -379,8 +424,8 @@ export function exportToPDF(programData, isThirdSunday) {
         doc.setFontSize(7);
         doc.setTextColor(128, 128, 128);
         const footerY = Math.min(285, yPosition + 5); // Adjust footer position if needed
-        doc.text('Generated by Church Program Smart Assistant', 20, footerY);
-        doc.text(`Total Items: ${programData.length}`, 170, footerY);
+        doc.text('Generated by Church Program Smart Assistant', 10, footerY);
+        doc.text(`Total Items: ${programData.length}`, 160, footerY);
         
         // Save the PDF
         doc.save(CONFIG.PDF_FILENAME);
@@ -438,7 +483,8 @@ function createJSONExport(programData, isThirdSunday) {
             techSettings: {
                 camera: item.camera,
                 scene: item.scene,
-                mic: item.mic
+                mic: item.mic,
+                stream: item.stream || ''
             },
             notes: item.notes || '',
             autoFilled: !item._isUnmatched // Check internal flag instead of notes content
@@ -474,6 +520,7 @@ export function importFromJSON(jsonData) {
                 camera: item.techSettings?.camera || '',
                 scene: item.techSettings?.scene || '',
                 mic: item.techSettings?.mic || '',
+                stream: item.techSettings?.stream || '',
                 notes: item.notes || ''
             }));
         }

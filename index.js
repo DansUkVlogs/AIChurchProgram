@@ -235,7 +235,7 @@ function showMissingInfoModal() {
         </div>
         
         <div class="row">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">Camera</label>
                 <div class="tile-container" id="modalCameraTiles">
                     <div class="selection-tile ${item.camera === '1' || (item.camera && item.camera.includes('1')) ? 'selected' : ''}" 
@@ -250,7 +250,7 @@ function showMissingInfoModal() {
                 <input type="hidden" id="modalCamera" value="${item.camera || ''}">
             </div>
             
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">Scene</label>
                 <div class="tile-container" id="modalSceneTiles">
                     <div class="selection-tile ${item.scene === '1' || (item.scene && item.scene.includes('1')) ? 'selected' : ''}" 
@@ -263,10 +263,19 @@ function showMissingInfoModal() {
                 <input type="hidden" id="modalScene" value="${item.scene || ''}">
             </div>
             
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <label for="modalMic" class="form-label">Mic</label>
                 <input type="text" class="form-control" id="modalMic" value="${item.mic}" 
                        maxlength="${CONFIG.MAX_MIC_LENGTH}" placeholder="e.g., Lectern, Amb, 2,3,4">
+            </div>
+
+            <div class="col-md-3 mb-3">
+                <label for="modalStream" class="form-label">Stream</label>
+                <select class="form-select" id="modalStream">
+                    <option value="">None</option>
+                    <option value="Go Live" ${item.stream === 'Go Live' ? 'selected' : ''}>Go Live</option>
+                    <option value="Go Live + YouTube" ${item.stream === 'Go Live + YouTube' ? 'selected' : ''}>Go Live + YouTube</option>
+                </select>
             </div>
         </div>
         
@@ -295,6 +304,7 @@ function saveMissingInfo() {
     const camera = document.getElementById('modalCamera')?.value;
     const scene = document.getElementById('modalScene')?.value;
     const mic = document.getElementById('modalMic')?.value;
+    const stream = document.getElementById('modalStream')?.value;
     const notes = document.getElementById('modalNotes')?.value.trim() || '';
     
     if (!camera || !scene || !mic) {
@@ -305,6 +315,7 @@ function saveMissingInfo() {
     item.camera = camera;
     item.scene = scene;
     item.mic = mic;
+    item.stream = stream || '';
     item.notes = notes;
     
     const modal = bootstrap.Modal.getInstance(document.getElementById('missingInfoModal'));
@@ -370,6 +381,9 @@ function displayResults() {
             </td>
             <td>
                 <span class="badge bg-success editable-field" data-field="mic" data-index="${index}" onclick="window.editField(${index}, 'mic')">${item.mic}</span>
+            </td>
+            <td>
+                <span class="badge bg-info editable-field ${item.stream ? '' : 'text-muted'}" data-field="stream" data-index="${index}" onclick="window.editField(${index}, 'stream')">${item.stream || 'Add stream...'}</span>
             </td>
             <td>
                 <span class="badge bg-warning editable-field ${item.notes ? '' : 'text-muted'}" data-field="notes" data-index="${index}" onclick="window.editField(${index}, 'notes')">${item.notes || 'Add notes...'}</span>
