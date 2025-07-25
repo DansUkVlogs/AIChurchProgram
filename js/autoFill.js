@@ -435,3 +435,4 @@ export function getAIInsights() {
 export function getAILearning() {
     return aiLearning;
 }
+

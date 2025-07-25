@@ -731,4 +731,3 @@ window.saveRowEditWithLearning = async function(index) {
     
     return result;
 };
-

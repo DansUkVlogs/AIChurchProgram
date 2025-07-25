@@ -559,3 +559,4 @@ export function toggleRowTile(tileElement, field) {
         handleSceneTileToggle(tileElement, container, hiddenInput, value);
     }
 }
+
