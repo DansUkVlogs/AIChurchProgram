@@ -22,35 +22,30 @@ export function exportToPDF(programData, isThirdSunday) {
             camera: { r: 0, g: 123, b: 255 },     // Blue (matches bg-primary)
             scene: { r: 108, g: 117, b: 125 },    // Gray (matches bg-secondary)  
             mic: { r: 25, g: 135, b: 84 },        // Green (matches bg-success)
+            stream: { r: 13, g: 202, b: 240 },    // Cyan (matches bg-info)
             notes: { r: 255, g: 193, b: 7 }       // Yellow (matches bg-warning)
         };
         
-        // Calculate dynamic sizing based on number of items - more aggressive scaling
+        // Calculate dynamic sizing - guaranteed fit with maximum possible size
         const itemCount = programData.length;
         const availableHeight = 235; // Available height for content
         
-        // More aggressive scaling for larger programs
-        let baseRowHeight, fontSize, shapeSize;
-        if (itemCount <= 10) {
-            baseRowHeight = Math.max(16, Math.min(20, availableHeight / (itemCount + 3)));
-            fontSize = Math.max(9, Math.min(12, baseRowHeight * 0.5));
-            shapeSize = Math.max(5, Math.min(7, baseRowHeight * 0.3));
-        } else if (itemCount <= 15) {
-            baseRowHeight = Math.max(13, Math.min(16, availableHeight / (itemCount + 3)));
-            fontSize = Math.max(8, Math.min(10, baseRowHeight * 0.5));
-            shapeSize = Math.max(4, Math.min(6, baseRowHeight * 0.3));
-        } else if (itemCount <= 20) {
-            baseRowHeight = Math.max(11, Math.min(14, availableHeight / (itemCount + 3)));
-            fontSize = Math.max(7, Math.min(9, baseRowHeight * 0.5));
-            shapeSize = Math.max(3, Math.min(5, baseRowHeight * 0.3));
-        } else {
-            // For very large programs, use minimal spacing
-            baseRowHeight = Math.max(9, availableHeight / (itemCount + 3));
-            fontSize = Math.max(6, baseRowHeight * 0.5);
-            shapeSize = Math.max(2.5, baseRowHeight * 0.3);
-        }
+        // Calculate optimal row height that guarantees all items fit
+        const totalRows = itemCount;
+        const maxPossibleRowHeight = availableHeight / totalRows;
         
-        const maxRowHeight = baseRowHeight * 1.05; // Reduce gap between rows
+        // Constrain row height to reasonable bounds and ensure shapes fit
+        const baseRowHeight = Math.max(8, Math.min(16, maxPossibleRowHeight));
+        
+        // Scale font and shapes proportionally to row height, with stricter limits
+        const fontSize = Math.max(5, Math.min(9, baseRowHeight * 0.5));
+        const shapeSize = Math.max(2, Math.min(4, baseRowHeight * 0.25));
+        
+        // Ensure shapes never exceed row height bounds
+        const maxShapeHeight = shapeSize * 2.4; // Maximum shape height
+        const safeRowHeight = Math.max(baseRowHeight, maxShapeHeight + 2); // Ensure shapes fit with padding
+        
+        const maxRowHeight = safeRowHeight;
         
         // Add title with styling
         doc.setFillColor(52, 58, 64); // Dark background
@@ -73,50 +68,63 @@ export function exportToPDF(programData, isThirdSunday) {
         // Add compact legend
         doc.setFontSize(9);
         doc.setFont(undefined, 'bold');
-        doc.text('Legend:', 20, 32);
+        doc.text('Legend:', 12, 35);
         
         // Camera legend (circle)
         doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
-        doc.circle(35, 33, 2, 'F');
+        doc.circle(30, 33, 2, 'F');
         doc.setTextColor(0, 0, 0);
-        doc.text('Camera', 40, 35);
+        doc.text('Camera', 35, 35);
         
         // Scene legend (rectangle)
         doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
-        doc.rect(65, 31, 4, 4, 'F');
-        doc.text('Scene', 71, 35);
+        doc.rect(62, 31, 4, 4, 'F');
+        doc.text('Scene', 68, 35);
         
         // Mic legend (rounded rectangle - changed from triangle)
         doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
-        doc.roundedRect(92, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Mic', 100, 35);
+        doc.roundedRect(89, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Mic', 97, 35);
+        
+        // Stream legend (rounded rectangle)
+        doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
+        doc.roundedRect(110, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Stream: 1=YouTube, 2=Live', 118, 35);
         
         // Notes legend (rounded rectangle)
         doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
-        doc.roundedRect(125, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Notes', 134, 35);
+        doc.roundedRect(170, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Notes', 178, 35);
         
-        // Add table headers with background
+        // Add table headers with background - wider to accommodate all columns
         const headerY = 44;
         doc.setFillColor(248, 249, 250); // Light gray background
-        doc.rect(20, headerY, 170, 8, 'F');
+        doc.rect(10, headerY, 190, 8, 'F');
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(10);
+        doc.setFontSize(9);
         doc.setFont(undefined, 'bold');
-        doc.text('Program Item', 22, headerY + 5);
-        doc.text('Camera', 90, headerY + 5);
-        doc.text('Scene', 115, headerY + 5);
-        doc.text('Mic', 140, headerY + 5);
+        doc.text('Program Item', 12, headerY + 5);
+        doc.text('Cam', 75, headerY + 5);
+        doc.text('Scene', 95, headerY + 5);
+        doc.text('Mic', 115, headerY + 5);
+        doc.text('Stream', 140, headerY + 5);
         doc.text('Notes', 165, headerY + 5);
         
         // Add horizontal line
         doc.setLineWidth(0.3);
-        doc.line(20, headerY + 8, 190, headerY + 8);
+        doc.line(10, headerY + 8, 200, headerY + 8);
+        
+        // Add program info just below the table headers
+        doc.setFontSize(7);
+        doc.setTextColor(128, 128, 128);
+        const infoY = headerY + 12;
+        doc.text('Generated by Church Program Smart Assistant', 10, infoY);
+        doc.text(`Total Items: ${programData.length}`, 160, infoY);
         
         // Add data rows with enhanced styling - all on one page
         doc.setFont(undefined, 'normal');
         doc.setFontSize(fontSize);
-        let yPosition = headerY + 16;
+        let yPosition = headerY + 18; // Start below the info line
         
         programData.forEach((item, index) => {
             // Calculate vertical center for all elements first
@@ -125,7 +133,7 @@ export function exportToPDF(programData, isThirdSunday) {
             // Only add subtle alternating background if it won't interfere
             if (index % 2 === 0 && maxRowHeight > 12) {
                 doc.setFillColor(254, 254, 254); // Very light gray, less intrusive
-                doc.rect(20, yPosition - 1, 170, maxRowHeight - 2, 'F');
+                doc.rect(10, yPosition - 1, 190, maxRowHeight - 2, 'F');
             }
             
             // Program item text with smart scaling, cleaning, and wrapping
@@ -139,7 +147,7 @@ export function exportToPDF(programData, isThirdSunday) {
                 .trim();               // Remove leading/trailing spaces
             
             // More restrictive width to ensure no overflow into shapes
-            const maxItemWidth = 60; // Reduced from 65 to prevent overflow
+            const maxItemWidth = 55; // Reduced to accommodate more columns
             
             // Force line breaks - don't let text overflow
             let lines = doc.splitTextToSize(textToShow, maxItemWidth);
@@ -151,14 +159,14 @@ export function exportToPDF(programData, isThirdSunday) {
                 lines = doc.splitTextToSize(textToShow, maxItemWidth);
             }
             
-            // If still too long after font scaling, truncate text intelligently
+            // If still too long after font scaling, truncate text more aggressively
             if (lines.length > 2) {
                 // More aggressive truncation to prevent overflow
                 const maxChars = Math.floor(maxItemWidth / (itemFontSize * 0.55)) * 2; // More conservative estimate
                 if (textToShow.length > maxChars) {
                     // Look for break points near the max length
                     const breakPoints = [' ', ',', '-', '&', '(', ')'];
-                    let truncateAt = maxChars - 3; // Leave room for "..."
+                    let truncateAt = maxChars - 1; // Leave room for potential break
                     
                     for (let i = truncateAt; i > maxChars * 0.6; i--) {
                         if (breakPoints.includes(textToShow[i])) {
@@ -167,7 +175,7 @@ export function exportToPDF(programData, isThirdSunday) {
                         }
                     }
                     
-                    textToShow = textToShow.substring(0, truncateAt).trim() + '...';
+                    textToShow = textToShow.substring(0, truncateAt).trim();
                     lines = doc.splitTextToSize(textToShow, maxItemWidth);
                 }
             }
@@ -184,82 +192,63 @@ export function exportToPDF(programData, isThirdSunday) {
             for (let i = 0; i < linesToShow; i++) {
                 let lineText = lines[i];
                 
-                // Double-check line width and truncate if necessary
-                while (doc.getTextWidth(lineText) > maxItemWidth && lineText.length > 10) {
-                    lineText = lineText.substring(0, lineText.length - 4) + '...';
+                // Double-check line width and make font smaller if necessary
+                while (doc.getTextWidth(lineText) > maxItemWidth && itemFontSize > 4) {
+                    itemFontSize -= 0.2;
+                    doc.setFontSize(itemFontSize);
                 }
                 
-                doc.text(lineText, 22, textStartY + (i * lineHeight));
+                doc.text(lineText, 12, textStartY + (i * lineHeight));
             }
             
             // Reset font size for other elements
             doc.setFontSize(fontSize);
             
-            // Camera with circle shape - perfectly centered, single line only
-            const cameraX = 92;
+            // Camera with circle shape - constrained sizing to always fit
+            const cameraX = 77;
             const cameraY = rowCenterY;
-            const cameraRadius = shapeSize * 1.3; // Larger circle for better readability
+            const cameraRadius = Math.min(shapeSize * 1.0, maxRowHeight * 0.25); // Constrain to row height
             doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
             doc.circle(cameraX, cameraY, cameraRadius, 'F');
             
-            // Camera text - single line only, maximized font size
+            // Camera text - slightly increased font size for better readability
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
             let cameraText = item.camera;
-            let cameraFontSize = Math.min(16, cameraRadius * 2.2); // Start with larger size
+            let cameraFontSize = Math.min(fontSize + 5, cameraRadius * 2.2); // Slightly increased
             doc.setFontSize(cameraFontSize);
             
-            // Ensure text fits in circle on single line, truncate if necessary
-            const maxCameraWidth = cameraRadius * 1.6;
-            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraFontSize > 7) {
+            // Make font smaller until text fits in circle
+            const maxCameraWidth = cameraRadius * 1.4;
+            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraFontSize > 6) {
                 cameraFontSize--;
                 doc.setFontSize(cameraFontSize);
-            }
-            
-            // If still too wide, truncate text
-            while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraText.length > 3) {
-                cameraText = cameraText.substring(0, cameraText.length - 1);
-            }
-            
-            // Add ellipsis if text was truncated
-            if (cameraText.length < item.camera.length && cameraText.length > 3) {
-                cameraText = cameraText.substring(0, cameraText.length - 3) + '...';
             }
             
             // Center text perfectly in circle with proper vertical alignment
             const cameraTextWidth = doc.getTextWidth(cameraText);
             doc.text(cameraText, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.25));
             
-            // Scene with rectangle shape - perfectly centered, single line only
-            const sceneX = 115;
-            const sceneY = rowCenterY - (shapeSize * 1.2);
-            const sceneWidth = shapeSize * 3.5; // Larger for better text space
-            const sceneHeight = shapeSize * 2.4; // Taller for better text
+            // Scene with rectangle shape - constrained sizing to always fit
+            const sceneX = 95;
+            const sceneY = rowCenterY - (Math.min(shapeSize * 1.0, maxRowHeight * 0.2));
+            const sceneWidth = Math.min(shapeSize * 2.5, 15); // Constrain maximum width
+            const sceneHeight = Math.min(shapeSize * 2.0, maxRowHeight * 0.4); // Constrain to row height
             doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
             doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
             
-            // Scene text - single line only, maximized font size
+            // Scene text - significantly increased font size to match camera
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
             let sceneText = item.scene;
-            let sceneFontSize = Math.min(16, shapeSize * 2.2); // Start with larger size
+            let sceneFontSize = Math.min(fontSize + 7, sceneHeight * 1.0); // Much larger font size
             doc.setFontSize(sceneFontSize);
             
-            // Ensure text fits in rectangle on single line, scale font or truncate
-            const maxSceneWidth = sceneWidth - 6;
-            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneFontSize > 7) {
+            // Make font smaller until text fits in rectangle
+            const maxSceneWidth = sceneWidth - 4;
+            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneFontSize > 6) {
                 sceneFontSize--;
                 doc.setFontSize(sceneFontSize);
-            }
-            
-            // If still too wide, truncate text
-            while (doc.getTextWidth(sceneText) > maxSceneWidth && sceneText.length > 3) {
-                sceneText = sceneText.substring(0, sceneText.length - 1);
-            }
-            
-            // Add ellipsis if text was truncated
-            if (sceneText.length < item.scene.length && sceneText.length > 3) {
-                sceneText = sceneText.substring(0, sceneText.length - 3) + '...';
             }
             
             // Center text perfectly in rectangle with proper vertical alignment
@@ -269,102 +258,123 @@ export function exportToPDF(programData, isThirdSunday) {
                 sceneY + (sceneHeight / 2) + (sceneFontSize * 0.25)
             );
             
-            // Mic with rounded rectangle shape - perfectly centered, single line only
-            const micX = 140;
-            const micY = rowCenterY - (shapeSize * 1.2);
-            const micWidth = shapeSize * 3.8 * 1.5; // Wider for better text space
-            const micHeight = shapeSize * 2.4; // Taller for better text
+            // Mic with rounded rectangle shape - constrained sizing to always fit
+            const micX = 115;
+            const micY = rowCenterY - (Math.min(shapeSize * 1.0, maxRowHeight * 0.2));
+            const micWidth = Math.min(shapeSize * 4.0, 25); // Constrain maximum width
+            const micHeight = Math.min(shapeSize * 2.0, maxRowHeight * 0.4); // Constrain to row height
             doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
             doc.roundedRect(micX, micY, micWidth, micHeight, 1.5, 1.5, 'F');
             
-            // Mic text - single line only, maximized font size
+            // Mic text - significantly increased font size to match camera
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
             let micText = item.mic;
-            let micFontSize = Math.min(16, shapeSize * 2.0); // Start with larger size
+            let micFontSize = Math.min(fontSize + 6, micHeight * 1.0); // Much larger font size
             doc.setFontSize(micFontSize);
             
-            // Ensure text fits in rectangle on single line, scale font or truncate
-            const maxMicWidth = micWidth - 6;
+            // Make font smaller until text fits in rectangle
+            const maxMicWidth = micWidth - 4;
             while (doc.getTextWidth(micText) > maxMicWidth && micFontSize > 6) {
                 micFontSize--;
                 doc.setFontSize(micFontSize);
-            }
-            
-            // If still too wide, truncate text
-            while (doc.getTextWidth(micText) > maxMicWidth && micText.length > 3) {
-                micText = micText.substring(0, micText.length - 1);
-            }
-            
-            // Add ellipsis if text was truncated
-            if (micText.length < item.mic.length && micText.length > 3) {
-                micText = micText.substring(0, micText.length - 3) + '...';
             }
             
             // Center text perfectly in rectangle with proper vertical alignment
             const micTextWidth = doc.getTextWidth(micText);
             doc.text(micText, micX + (micWidth / 2) - (micTextWidth / 2), micY + (micHeight / 2) + (micFontSize * 0.25));
             
-            // Notes with rounded rectangle (if exists) - perfectly centered
-            if (item.notes && item.notes.trim()) {
-                const notesX = 162;
-                const notesY = rowCenterY - (shapeSize * 1.2);
-                const notesWidth = shapeSize * 11; // Even longer for maximum text space
-                const notesHeight = shapeSize * 2.4; // Same height as mic box for consistency
+            // Stream with rounded rectangle (if exists) - constrained sizing to always fit
+            if (item.stream && item.stream.trim()) {
+                const streamX = 140;
+                const streamY = rowCenterY - (Math.min(shapeSize * 1.0, maxRowHeight * 0.2));
+                const streamWidth = Math.min(shapeSize * 3.0, 18); // Constrain maximum width
+                const streamHeight = Math.min(shapeSize * 2.0, maxRowHeight * 0.4); // Constrain to row height
+                doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
+                doc.roundedRect(streamX, streamY, streamWidth, streamHeight, 1.5, 1.5, 'F');
                 
-                // Notes text - use same font sizing logic as mic for consistency
+                // Stream text - significantly increased font size to match camera
+                doc.setTextColor(255, 255, 255);
+                doc.setFont(undefined, 'bold');
+                let streamText = item.stream;
+                let streamFontSize = Math.min(fontSize + 6, streamHeight * 1.0); // Much larger font size
+                doc.setFontSize(streamFontSize);
+                
+                // Make font smaller until text fits in rectangle
+                const maxStreamWidth = streamWidth - 4;
+                while (doc.getTextWidth(streamText) > maxStreamWidth && streamFontSize > 6) {
+                    streamFontSize--;
+                    doc.setFontSize(streamFontSize);
+                }
+                
+                // Center text perfectly in rectangle with proper vertical alignment
+                const streamTextWidth = doc.getTextWidth(streamText);
+                doc.text(streamText, streamX + (streamWidth / 2) - (streamTextWidth / 2), streamY + (streamHeight / 2) + (streamFontSize * 0.25));
+            }
+            
+            // Notes with rounded rectangle (if exists) - dynamic text scaling
+            if (item.notes && item.notes.trim()) {
+                const notesX = 165;
+                const notesY = rowCenterY - (Math.min(shapeSize * 1.0, maxRowHeight * 0.2));
+                const notesWidth = Math.min(shapeSize * 8.0, 30); // Constrain maximum width
+                const notesHeight = Math.min(shapeSize * 2.0, maxRowHeight * 0.4); // Constrain to row height
+                
+                // Notes text - single line (input already limited to 25 characters)
                 doc.setTextColor(0, 0, 0);
                 doc.setFont(undefined, 'normal');
-                let notesFontSize = Math.min(16, shapeSize * 2.0); // Same as mic box
+                
+                // Clean up the notes text (no truncation needed - input is limited)
+                let cleanNotes = item.notes.replace(/\s+/g, ' ').trim();
+                const maxNotesTextWidth = notesWidth - 6; // Reduced margin for more space
+                
+                // Dynamic font sizing - start large and scale down if needed
+                let notesFontSize = Math.min(fontSize + 8, notesHeight * 0.8); // Start with larger font
                 doc.setFontSize(notesFontSize);
                 
-                // Split notes text into lines if needed, using same logic as mic
-                let notesLines = [];
-                const maxNotesTextWidth = notesWidth - 6; // Same margin as mic
+                // Scale down font size until text fits perfectly
+                while (doc.getTextWidth(cleanNotes) > maxNotesTextWidth && notesFontSize > 4) {
+                    notesFontSize -= 0.3; // Smaller decrements for finer control
+                    doc.setFontSize(notesFontSize);
+                }
                 
-                if (doc.getTextWidth(item.notes) > maxNotesTextWidth) {
-                    // Try to split on common delimiters like mic box
-                    if (item.notes.includes(',')) {
-                        notesLines = item.notes.split(',').map(s => s.trim());
-                    } else if (item.notes.includes(' ')) {
-                        // Split on spaces if too long
-                        notesLines = doc.splitTextToSize(item.notes, maxNotesTextWidth);
+                // For very short text (1-3 characters), allow even larger font
+                if (cleanNotes.length <= 3) {
+                    let largeFontSize = Math.min(fontSize + 12, notesHeight * 0.9);
+                    doc.setFontSize(largeFontSize);
+                    
+                    // Check if the large font still fits
+                    if (doc.getTextWidth(cleanNotes) <= maxNotesTextWidth) {
+                        notesFontSize = largeFontSize;
                     } else {
-                        notesLines = [item.notes];
-                    }
-                } else {
-                    notesLines = [item.notes];
-                }
-                
-                const notesLinesToShow = Math.min(2, notesLines.length);
-                
-                // Ensure each line fits and reduce font size if needed (same as mic)
-                for (let line of notesLines.slice(0, notesLinesToShow)) {
-                    while (doc.getTextWidth(line) > maxNotesTextWidth && notesFontSize > 6) {
-                        notesFontSize--;
+                        // Scale back down if too large
                         doc.setFontSize(notesFontSize);
-                        // Re-split text with new font size if needed
-                        if (notesLines.length > 1 && item.notes.includes(' ')) {
-                            notesLines = doc.splitTextToSize(item.notes, maxNotesTextWidth);
-                        }
                     }
                 }
                 
-                // Draw the notes box with consistent sizing
+                // For medium text (4-8 characters), use medium large font
+                else if (cleanNotes.length <= 8) {
+                    let mediumFontSize = Math.min(fontSize + 10, notesHeight * 0.85);
+                    doc.setFontSize(mediumFontSize);
+                    
+                    // Check if the medium font still fits
+                    if (doc.getTextWidth(cleanNotes) <= maxNotesTextWidth) {
+                        notesFontSize = mediumFontSize;
+                    } else {
+                        // Scale back down if too large
+                        doc.setFontSize(notesFontSize);
+                    }
+                }
+                
+                // Draw the notes box
                 doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
                 doc.roundedRect(notesX, notesY, notesWidth, notesHeight, 1.5, 1.5, 'F');
                 
-                // Center text perfectly in notes box with tighter line spacing
-                const lineSpacing = notesFontSize * 0.9; // Much tighter spacing to fit better
-                const totalHeight = notesLinesToShow * lineSpacing;
-                const startY = notesY + (notesHeight / 2) - (totalHeight / 2) + (notesFontSize * 0.6);
-                
-                for (let i = 0; i < notesLinesToShow; i++) {
-                    const line = notesLines[i];
-                    const lineWidth = doc.getTextWidth(line);
-                    // Center horizontally within the notes box
+                // Center the single line of text vertically and horizontally
+                if (cleanNotes) {
+                    const lineWidth = doc.getTextWidth(cleanNotes);
                     const textX = notesX + (notesWidth / 2) - (lineWidth / 2);
-                    doc.text(line, textX, startY + (i * lineSpacing));
+                    const textY = notesY + (notesHeight / 2) + (notesFontSize * 0.3);
+                    doc.text(cleanNotes, textX, textY);
                 }
             }
             
@@ -374,13 +384,6 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFontSize(fontSize);
             yPosition += maxRowHeight;
         });
-        
-        // Add footer
-        doc.setFontSize(7);
-        doc.setTextColor(128, 128, 128);
-        const footerY = Math.min(285, yPosition + 5); // Adjust footer position if needed
-        doc.text('Generated by Church Program Smart Assistant', 20, footerY);
-        doc.text(`Total Items: ${programData.length}`, 170, footerY);
         
         // Save the PDF
         doc.save(CONFIG.PDF_FILENAME);
@@ -438,7 +441,8 @@ function createJSONExport(programData, isThirdSunday) {
             techSettings: {
                 camera: item.camera,
                 scene: item.scene,
-                mic: item.mic
+                mic: item.mic,
+                stream: item.stream || ''
             },
             notes: item.notes || '',
             autoFilled: !item._isUnmatched // Check internal flag instead of notes content
@@ -474,6 +478,7 @@ export function importFromJSON(jsonData) {
                 camera: item.techSettings?.camera || '',
                 scene: item.techSettings?.scene || '',
                 mic: item.techSettings?.mic || '',
+                stream: item.techSettings?.stream || '',
                 notes: item.notes || ''
             }));
         }
