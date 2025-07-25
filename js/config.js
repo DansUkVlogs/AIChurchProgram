@@ -23,7 +23,7 @@ export const CONFIG = {
     
     // Field limits
     MAX_MIC_LENGTH: 20,
-    MAX_NOTES_LENGTH: 50,
+    MAX_NOTES_LENGTH: 25, // Reduced to match PDF display limit
     MAX_PROGRAM_ITEM_LENGTH: 100
 };
 
@@ -113,19 +113,19 @@ export const EXAMPLE_PROGRAM = `Welcome & Opening Prayer
 SASB 123 - Amazing Grace Band
 Announcements & Notices
 SOF 456 - Here I Am to Worship WG
-Children's Story - Emma
+SOF 456 - Here I Am to Worship WG
 SASB 234 - How Great Thou Art Piano
 Bible Reading - Romans 8:28-39
 Prayer for Healing
 Baptism Video Presentation
-SOF 567 - Blessed Be Your Name Band
 YP Spot - Youth Testimony
-Special Music - Verity
+SOF 567 - Blessed Be Your Name Band
+SOF 567 - Blessed Be Your Name Band
 Message - The Power of Faith - Pastor David
-Call for Commitment
+SASB 345 - Just As I Am Piano
 SASB 345 - Just As I Am Piano
 Offering & Special Music
-Bible Study Invitation
+Bible Reading - Psalm 23
 SASB 901 - Crown Him with Many Crowns WG
 Fellowship Time Announcement
 Closing Prayer - Elder Smith`;
