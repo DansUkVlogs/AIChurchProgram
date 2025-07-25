@@ -10,7 +10,14 @@ import {
     readFileAsText,
     setupKeyboardShortcuts
 } from './js/utils.js';
-import { applyAutoFillLogic } from './js/autoFill.js';
+import { 
+    applyAutoFillLogic, 
+    initializeAI,
+    applyAutoFillWithAI,
+    learnFromUserEdits,
+    getAIStatus,
+    getAIInsights
+} from './js/autoFill.js';
 import { exportToPDF, exportToJSON, importFromJSON } from './js/export.js';
 import { 
     editField, 
@@ -49,19 +56,27 @@ window.handleJSONUpload = handleJSONUpload;
 window.processProgram = processProgram;
 window.loadExample = loadExample;
 window.clearInput = clearInput;
-window.exportToPDF = () => exportToPDF(programData, isThirdSunday);
+window.exportToPDF = async () => await exportToPDF(programData, isThirdSunday);
 window.saveAsJSON = () => exportToJSON(programData, isThirdSunday);
 window.saveMissingInfo = saveMissingInfo;
 window.toggleModalTile = toggleModalTile;
+window.showAIInsights = function() {
+    const modal = new bootstrap.Modal(document.getElementById('aiInsightsModal'));
+    modal.show();
+    refreshAIInsights();
+};
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Show the third Sunday modal on startup
     const thirdSundayModal = new bootstrap.Modal(document.getElementById('thirdSundayModal'));
     thirdSundayModal.show();
     
     // Initialize theme
     initializeTheme();
+    
+    // Initialize AI system (in background)
+    initializeAISystem();
     
     // Set up event listeners
     setupEventListeners();
@@ -163,7 +178,7 @@ async function handleJSONUpload(event) {
 }
 
 // Main processing function
-function processProgram() {
+async function processProgram() {
     const programTextArea = document.getElementById('programText');
     if (!programTextArea) return;
     
@@ -176,41 +191,65 @@ function processProgram() {
     // Show loading spinner
     showLoadingSpinner();
 
-    // Parse program items
-    const lines = text.split('\n').filter(line => line.trim());
-    programData = [];
-    missingItems = [];
+    try {
+        // Parse program items
+        const lines = text.split('\n').filter(line => line.trim());
+        programData = [];
+        missingItems = [];
 
-    lines.forEach((line, index) => {
-        const item = {
-            id: index,
-            programItem: line.trim(),
-            camera: '',
-            scene: '',
-            mic: '',
-            notes: ''
-        };
+        // Process each line with AI-enhanced auto-fill
+        for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
+            const item = {
+                id: index,
+                programItem: line.trim(),
+                camera: '',
+                scene: '',
+                mic: '',
+                notes: '',
+                stream: '' // Add stream field
+            };
 
-        // Apply auto-fill logic
-        applyAutoFillLogic(item, isThirdSunday);
-        programData.push(item);
+            // Apply AI-enhanced auto-fill logic
+            const context = {
+                index: index,
+                totalItems: lines.length,
+                itemType: '', // Could be enhanced with better parsing
+                performer: ''
+            };
+            
+            // Use AI-enhanced auto-fill if available, otherwise fall back to traditional
+            const aiStatus = getAIStatus();
+            if (aiStatus.isAvailable && aiStatus.isInitialized) {
+                await applyAutoFillWithAI(item, isThirdSunday, context);
+            } else {
+                applyAutoFillLogic(item, isThirdSunday);
+            }
+            
+            programData.push(item);
 
-        // Check for missing information
-        if (!item.camera || !item.scene || !item.mic) {
-            missingItems.push(index);
+            // Check for missing information
+            if (!item.camera || !item.scene || !item.mic) {
+                missingItems.push(index);
+            }
         }
-    });
 
-    // Hide loading spinner
-    hideLoadingSpinner();
+        // Hide loading spinner
+        hideLoadingSpinner();
 
-    // Handle missing information
-    if (missingItems.length > 0) {
-        currentMissingIndex = 0;
-        showMissingInfoModal();
-    } else {
-        displayResults();
-        showAlert('Program processed successfully!', 'success');
+        // Handle missing information
+        if (missingItems.length > 0) {
+            currentMissingIndex = 0;
+            showMissingInfoModal();
+        } else {
+            displayResults();
+            showAlert('Program processed successfully!', 'success');
+        }
+        
+    } catch (error) {
+        hideLoadingSpinner();
+        console.error('Error processing program:', error);
+        showAlert('Error processing program: ' + error.message, 'danger');
     }
 }
 
@@ -439,3 +478,256 @@ function loadExample() {
     }
 }
 
+// Initialize AI system in background
+async function initializeAISystem() {
+    try {
+        console.log('[Main] Initializing AI system...');
+        await initializeAI();
+        
+        // Show AI status if available
+        const aiStatus = getAIStatus();
+        if (aiStatus.isAvailable) {
+            console.log(`[Main] AI system ready - Phase: ${aiStatus.currentPhase}`);
+            
+            // Could add a small indicator in the UI showing AI is active
+            updateAIStatusIndicator(aiStatus);
+        }
+    } catch (error) {
+        console.warn('[Main] AI system initialization failed:', error);
+        // App continues to work without AI
+    }
+}
+
+// Update AI status indicator in UI
+function updateAIStatusIndicator(aiStatus) {
+    const statusElement = document.getElementById('aiStatus');
+    if (statusElement) {
+        statusElement.style.display = 'inline';
+        
+        if (aiStatus.isInitialized) {
+            const phaseNames = {
+                'rule-based': 'Learning',
+                'pattern-learning': 'Patterns',
+                'hybrid': 'Hybrid AI',
+                'neural-primary': 'Smart AI'
+            };
+            
+            const phaseName = phaseNames[aiStatus.currentPhase] || 'Active';
+            statusElement.innerHTML = `<i class="fas fa-robot me-1"></i>AI: ${phaseName}`;
+            statusElement.className = 'badge bg-success me-2';
+            
+            // Add tooltip with more details
+            statusElement.title = `AI System Active - Phase: ${aiStatus.currentPhase}
+Total Predictions: ${aiStatus.performance?.totalPredictions || 0}
+Accuracy: ${((aiStatus.performance?.overallAccuracy || 0) * 100).toFixed(1)}%`;
+        } else {
+            statusElement.innerHTML = '<i class="fas fa-robot me-1"></i>AI: Starting';
+            statusElement.className = 'badge bg-warning me-2';
+            statusElement.title = 'AI system is starting up...';
+        }
+    }
+}
+
+// Refresh AI insights
+window.refreshAIInsights = function() {
+    const content = document.getElementById('aiInsightsContent');
+    if (!content) return;
+    
+    try {
+        const aiStatus = getAIStatus();
+        const aiInsights = getAIInsights();
+        
+        if (!aiStatus.isAvailable) {
+            content.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    AI system is not yet available. The system will start learning after processing a few programs.
+                </div>
+            `;
+            return;
+        }
+        
+        content.innerHTML = generateAIInsightsHTML(aiStatus, aiInsights);
+        
+    } catch (error) {
+        console.error('Error refreshing AI insights:', error);
+        content.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Error loading AI insights: ${error.message}
+            </div>
+        `;
+    }
+};
+
+// Generate HTML for AI insights
+function generateAIInsightsHTML(aiStatus, aiInsights) {
+    const perf = aiStatus.performance || {};
+    const progress = aiStatus.phaseProgress || {};
+    const requirements = aiStatus.nextPhaseRequirements || {};
+    
+    return `
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>System Status
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-6">
+                                <small class="text-muted">Current Phase</small>
+                                <div class="fw-bold">${aiStatus.currentPhase || 'Unknown'}</div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Total Predictions</small>
+                                <div class="fw-bold">${perf.totalPredictions || 0}</div>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <small class="text-muted">Overall Accuracy</small>
+                                <div class="fw-bold text-${(perf.overallAccuracy || 0) > 0.7 ? 'success' : 'warning'}">
+                                    ${((perf.overallAccuracy || 0) * 100).toFixed(1)}%
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted">Trend</small>
+                                <div class="fw-bold text-${perf.trend === 'improving' ? 'success' : perf.trend === 'declining' ? 'danger' : 'info'}">
+                                    ${perf.trend || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="mb-0">
+                            <i class="fas fa-arrow-up me-2"></i>Progress to Next Phase
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <small class="text-muted">Next: ${requirements.nextPhase || 'Complete'}</small>
+                        </div>
+                        ${progress.percentage !== undefined ? `
+                            <div class="progress mb-2">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: ${progress.percentage}%" 
+                                     aria-valuenow="${progress.percentage}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    ${progress.percentage.toFixed(0)}%
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                ${progress.current || 0} / ${progress.required || 0} predictions
+                                ${progress.accuracyRequired ? ` | ${progress.accuracyRequired}% accuracy needed` : ''}
+                            </small>
+                        ` : '<small class="text-muted">System complete</small>'}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        ${aiInsights && aiInsights.fieldBreakdown ? `
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>Field Performance
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        ${aiInsights.fieldBreakdown.map(field => `
+                            <div class="col-md-3 mb-3">
+                                <div class="text-center">
+                                    <div class="text-muted small">${field.field.toUpperCase()}</div>
+                                    <div class="fw-bold">${field.accuracy}</div>
+                                    <div class="small text-muted">${field.totalPredictions} predictions</div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            </div>
+        ` : ''}
+        
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-lightbulb me-2"></i>
+            <strong>How it works:</strong> The AI system learns from your corrections and gradually improves its predictions. 
+            It starts with simple rules, then learns patterns, and eventually uses advanced neural networks for the most accurate predictions.
+        </div>
+    `;
+}
+
+// Enhanced field saving that learns from user edits
+window.saveFieldWithLearning = async function(index, field) {
+    // Get the current values before saving
+    const item = programData[index];
+    const originalValues = {
+        camera: item.camera,
+        scene: item.scene,
+        mic: item.mic,
+        notes: item.notes,
+        stream: item.stream
+    };
+    
+    // Call the original save function
+    const result = saveField(index, field, programData, displayResults);
+    
+    // Learn from user edits if AI is available
+    if (item._aiPredictions && getAIStatus().isAvailable) {
+        const finalValues = {
+            camera: item.camera,
+            scene: item.scene,
+            mic: item.mic,
+            notes: item.notes,
+            stream: item.stream
+        };
+        
+        await learnFromUserEdits(item, finalValues, {
+            field: field,
+            editType: 'single-field'
+        });
+    }
+    
+    return result;
+};
+
+// Enhanced row saving that learns from user edits
+window.saveRowEditWithLearning = async function(index) {
+    // Get the current values before saving
+    const item = programData[index];
+    const originalValues = {
+        camera: item.camera,
+        scene: item.scene,
+        mic: item.mic,
+        notes: item.notes,
+        stream: item.stream
+    };
+    
+    // Call the original save function
+    const result = saveRowEdit(index, programData, displayResults);
+    
+    // Learn from user edits if AI is available
+    if (item._aiPredictions && getAIStatus().isAvailable) {
+        const finalValues = {
+            camera: item.camera,
+            scene: item.scene,
+            mic: item.mic,
+            notes: item.notes,
+            stream: item.stream
+        };
+        
+        await learnFromUserEdits(item, finalValues, {
+            editType: 'full-row'
+        });
+    }
+    
+    return result;
+};

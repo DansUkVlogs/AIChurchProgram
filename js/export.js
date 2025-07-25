@@ -2,9 +2,10 @@
 
 import { CONFIG } from './config.js';
 import { showAlert, showLoadingSpinner, hideLoadingSpinner, downloadFile, formatDate } from './utils.js';
+import { getAILearning } from './autoFill.js';
 
 // Export to PDF
-export function exportToPDF(programData, isThirdSunday) {
+export async function exportToPDF(programData, isThirdSunday) {
     if (programData.length === 0) {
         showAlert('No data to export', 'warning');
         return;
@@ -312,7 +313,7 @@ export function exportToPDF(programData, isThirdSunday) {
                 doc.text(streamText, streamX + (streamWidth / 2) - (streamTextWidth / 2), streamY + (streamHeight / 2) + (streamFontSize * 0.25));
             }
             
-            // Notes with rounded rectangle (if exists) - constrained sizing and improved positioning
+            // Notes with rounded rectangle (if exists) - dynamic text scaling
             if (item.notes && item.notes.trim()) {
                 const notesX = 165;
                 const notesY = rowCenterY - (Math.min(shapeSize * 1.0, maxRowHeight * 0.2));
@@ -325,16 +326,44 @@ export function exportToPDF(programData, isThirdSunday) {
                 
                 // Clean up the notes text (no truncation needed - input is limited)
                 let cleanNotes = item.notes.replace(/\s+/g, ' ').trim();
-                const maxNotesTextWidth = notesWidth - 8; // Margin for better fit
+                const maxNotesTextWidth = notesWidth - 6; // Reduced margin for more space
                 
-                // Use larger font size for single line
-                let notesFontSize = Math.min(fontSize + 5, notesHeight * 0.7);
+                // Dynamic font sizing - start large and scale down if needed
+                let notesFontSize = Math.min(fontSize + 8, notesHeight * 0.8); // Start with larger font
                 doc.setFontSize(notesFontSize);
                 
-                // Ensure the text fits with the chosen font size
-                while (doc.getTextWidth(cleanNotes) > maxNotesTextWidth && notesFontSize > 5) {
-                    notesFontSize -= 0.5;
+                // Scale down font size until text fits perfectly
+                while (doc.getTextWidth(cleanNotes) > maxNotesTextWidth && notesFontSize > 4) {
+                    notesFontSize -= 0.3; // Smaller decrements for finer control
                     doc.setFontSize(notesFontSize);
+                }
+                
+                // For very short text (1-3 characters), allow even larger font
+                if (cleanNotes.length <= 3) {
+                    let largeFontSize = Math.min(fontSize + 12, notesHeight * 0.9);
+                    doc.setFontSize(largeFontSize);
+                    
+                    // Check if the large font still fits
+                    if (doc.getTextWidth(cleanNotes) <= maxNotesTextWidth) {
+                        notesFontSize = largeFontSize;
+                    } else {
+                        // Scale back down if too large
+                        doc.setFontSize(notesFontSize);
+                    }
+                }
+                
+                // For medium text (4-8 characters), use medium large font
+                else if (cleanNotes.length <= 8) {
+                    let mediumFontSize = Math.min(fontSize + 10, notesHeight * 0.85);
+                    doc.setFontSize(mediumFontSize);
+                    
+                    // Check if the medium font still fits
+                    if (doc.getTextWidth(cleanNotes) <= maxNotesTextWidth) {
+                        notesFontSize = mediumFontSize;
+                    } else {
+                        // Scale back down if too large
+                        doc.setFontSize(notesFontSize);
+                    }
                 }
                 
                 // Draw the notes box
@@ -356,6 +385,9 @@ export function exportToPDF(programData, isThirdSunday) {
             doc.setFontSize(fontSize);
             yPosition += maxRowHeight;
         });
+        
+        // AI Learning: User exported PDF - learn from all final configurations
+        await learnFromPDFExport(programData, isThirdSunday);
         
         // Save the PDF
         doc.save(CONFIG.PDF_FILENAME);
@@ -529,3 +561,74 @@ export function generateSummaryReport(programData) {
         }
     };
 }
+
+// AI Learning: Learn from user's final configuration when they export PDF
+async function learnFromPDFExport(programData, isThirdSunday) {
+    try {
+        const aiLearning = getAILearning();
+        if (!aiLearning || !aiLearning.isInitialized) {
+            console.log('[Learning] AI system not ready, skipping PDF export learning');
+            return;
+        }
+        
+        console.log(`[Learning] User exported PDF with ${programData.length} items - capturing final configurations for AI learning`);
+        
+        let learnedCount = 0;
+        
+        // Learn from each program item's final configuration
+        for (const item of programData) {
+            try {
+                // Create the program item object for AI
+                const programItem = {
+                    title: item.programItem,
+                    type: item._originalItem?.type || '',
+                    performer: item._originalItem?.performer || '',
+                    notes: item.notes || '',
+                    index: item.id || 0
+                };
+                
+                // Create the final user values
+                const userValues = {
+                    camera: item.camera || '',
+                    scene: item.scene || '',
+                    mic: item.mic || '',
+                    notes: item.notes || '',
+                    stream: item.stream || ''
+                };
+                
+                // Context for learning
+                const context = {
+                    isThirdSunday: isThirdSunday || false,
+                    source: 'pdf_export',
+                    timestamp: new Date().toISOString(),
+                    position: item.id || 0
+                };
+                
+                // Get the AI predictions that were made initially (if any)
+                const aiPredictions = item._aiPredictions || {};
+                
+                // Let the AI learn from this final configuration
+                await aiLearning.learnFromFeedback(programItem, aiPredictions, userValues, context);
+                
+                learnedCount++;
+                
+            } catch (itemError) {
+                console.warn(`[Learning] Could not learn from item "${item.programItem}":`, itemError);
+            }
+        }
+        
+        console.log(`[Learning] Successfully learned from ${learnedCount}/${programData.length} items in PDF export`);
+        
+        // Get updated AI status after learning
+        const status = await aiLearning.getSystemStatus();
+        if (status && status.performance) {
+            console.log(`[Learning] AI Status after PDF export: Phase ${status.currentPhase}, ${status.performance.totalPredictions} total predictions`);
+        } else {
+            console.log(`[Learning] AI Status after PDF export: Phase ${status?.currentPhase || 'unknown'}, performance data not available`);
+        }
+        
+    } catch (error) {
+        console.error('[Learning] Error during PDF export learning:', error);
+    }
+}
+
