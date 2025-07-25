@@ -68,7 +68,7 @@ export function exportToPDF(programData, isThirdSunday) {
         // Add compact legend
         doc.setFontSize(9);
         doc.setFont(undefined, 'bold');
-        doc.text('Legend:', 20, 32);
+        doc.text('Legend:', 12, 35);
         
         // Camera legend (circle)
         doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
@@ -88,8 +88,8 @@ export function exportToPDF(programData, isThirdSunday) {
         
         // Stream legend (rounded rectangle)
         doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
-        doc.roundedRect(135, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Stream: 1=YouTube, 2=Live', 143, 35);
+        doc.roundedRect(110, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Stream: 1=YouTube, 2=Live', 118, 35);
         
         // Notes legend (rounded rectangle)
         doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
