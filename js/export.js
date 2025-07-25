@@ -88,8 +88,8 @@ export function exportToPDF(programData, isThirdSunday) {
         
         // Stream legend (rounded rectangle)
         doc.setFillColor(colors.stream.r, colors.stream.g, colors.stream.b);
-        doc.roundedRect(115, 31, 6, 4, 0.5, 0.5, 'F');
-        doc.text('Stream: 1=YouTube, 2=Live', 123, 35);
+        doc.roundedRect(135, 31, 6, 4, 0.5, 0.5, 'F');
+        doc.text('Stream: 1=YouTube, 2=Live', 143, 35);
         
         // Notes legend (rounded rectangle)
         doc.setFillColor(colors.notes.r, colors.notes.g, colors.notes.b);
@@ -107,7 +107,7 @@ export function exportToPDF(programData, isThirdSunday) {
         doc.text('Cam', 75, headerY + 5);
         doc.text('Scene', 95, headerY + 5);
         doc.text('Mic', 115, headerY + 5);
-        doc.text('Stream', 145, headerY + 5);
+        doc.text('Stream', 140, headerY + 5);
         doc.text('Notes', 165, headerY + 5);
         
         // Add horizontal line
