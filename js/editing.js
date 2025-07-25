@@ -2,6 +2,7 @@
 
 import { CONFIG, FORM_OPTIONS } from './config.js';
 import { showAlert, addHighlightAnimation, validateProgramItem } from './utils.js';
+import { getAILearning } from './autoFill.js';
 
 let currentEditIndex = -1;
 
@@ -102,6 +103,7 @@ export function saveField(index, field, programData, displayCallback) {
     if (!input) return;
     
     const newValue = input.value.trim();
+    const oldValue = programData[index][field];
     
     // Notes and stream fields can be empty, but other fields cannot
     if (!newValue && field !== 'notes' && field !== 'stream') {

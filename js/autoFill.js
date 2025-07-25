@@ -1,6 +1,10 @@
 // Auto-fill logic for church program items
 
 import { AUTO_FILL_RULES } from './config.js';
+import { AILearning } from './ai-learning.js';
+
+// Initialize AI learning system
+let aiLearning = null;
 
 export function applyAutoFillLogic(item, isThirdSunday = false) {
     // Clean up the text first - remove extra spaces and normalize
@@ -298,4 +302,136 @@ export function validateAutoFill(item) {
         valid: issues.length === 0,
         issues: issues
     };
+}
+
+// Initialize AI system (called from main app)
+export async function initializeAI() {
+    if (!aiLearning) {
+        aiLearning = new AILearning();
+        await aiLearning.initialize();
+        console.log('[Auto-Fill] AI system initialized');
+    }
+}
+
+// Enhanced auto-fill that combines traditional rules with AI predictions
+export async function applyAutoFillWithAI(item, isThirdSunday = false, context = {}) {
+    // First apply traditional auto-fill rules
+    const ruleBasedItem = applyAutoFillLogic(item, isThirdSunday);
+    
+    // If AI is available and the item wasn't fully matched by rules, try AI prediction
+    if (aiLearning && aiLearning.isInitialized) {
+        try {
+            // Create program item object for AI
+            const programItem = {
+                title: item.programItem,
+                type: context.itemType || '',
+                performer: context.performer || '',
+                notes: item.notes || '',
+                index: context.index || 0
+            };
+            
+            // Get AI predictions
+            const aiPredictions = await aiLearning.predict(programItem, {
+                isThirdSunday: isThirdSunday,
+                position: context.index || 0,
+                wasUnmatched: item._isUnmatched || false
+            });
+            
+            // Apply AI predictions where confidence is high enough
+            applyAIPredictions(ruleBasedItem, aiPredictions);
+            
+            // Store AI predictions for learning
+            ruleBasedItem._aiPredictions = aiPredictions;
+            ruleBasedItem._originalItem = programItem;
+            
+        } catch (error) {
+            console.error('[Auto-Fill] Error getting AI predictions:', error);
+        }
+    }
+    
+    return ruleBasedItem;
+}
+
+// Apply AI predictions to item where confidence is sufficient
+function applyAIPredictions(item, aiPredictions) {
+    // Only apply AI predictions if they have high confidence
+    // or if the rule-based system didn't find a match
+    
+    Object.keys(aiPredictions).forEach(field => {
+        const prediction = aiPredictions[field];
+        const confidence = prediction.confidence || 0;
+        
+        // Apply AI prediction if:
+        // 1. High confidence (>0.7), OR
+        // 2. Medium confidence (>0.5) and rule-based didn't match, OR
+        // 3. Any confidence and current field is empty
+        const shouldApply = confidence > 0.7 || 
+                          (confidence > 0.5 && item._isUnmatched) ||
+                          (confidence > 0.3 && !item[field]);
+        
+        if (shouldApply && prediction.value) {
+            const oldValue = item[field];
+            item[field] = prediction.value;
+            
+            // Add AI indicator to help users understand the source
+            if (!item._aiApplied) item._aiApplied = {};
+            item._aiApplied[field] = {
+                confidence: confidence,
+                source: prediction.source,
+                oldValue: oldValue
+            };
+            
+            console.log(`[Auto-Fill] Applied AI prediction for ${field}: "${prediction.value}" (confidence: ${confidence.toFixed(2)})`);
+        }
+    });
+}
+
+// Learn from user corrections (called when user edits fields)
+export async function learnFromUserEdits(originalItem, finalValues, context = {}) {
+    if (!aiLearning || !aiLearning.isInitialized) return;
+    
+    try {
+        // Only learn if we made AI predictions for this item
+        if (originalItem._aiPredictions && originalItem._originalItem) {
+            await aiLearning.learnFromFeedback(
+                originalItem._originalItem,
+                originalItem._aiPredictions,
+                finalValues,
+                context
+            );
+            
+            console.log('[Auto-Fill] Learning from user corrections completed');
+        }
+    } catch (error) {
+        console.error('[Auto-Fill] Error during learning:', error);
+    }
+}
+
+// Get AI system status
+export function getAIStatus() {
+    if (!aiLearning) {
+        return {
+            isAvailable: false,
+            status: 'Not initialized'
+        };
+    }
+    
+    return {
+        isAvailable: true,
+        ...aiLearning.getSystemStatus()
+    };
+}
+
+// Get AI insights for debugging/display
+export function getAIInsights() {
+    if (!aiLearning || !aiLearning.isInitialized) {
+        return null;
+    }
+    
+    return aiLearning.generateDetailedReport();
+}
+
+// Export AI learning instance for other modules
+export function getAILearning() {
+    return aiLearning;
 }

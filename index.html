@@ -78,6 +78,10 @@
                         <button class="btn btn-info btn-sm me-2" data-bs-toggle="modal" data-bs-target="#helpModal">
                             <i class="fas fa-question-circle me-1"></i>Help
                         </button>
+                        <span id="aiStatus" class="badge bg-secondary me-2" style="display: none; cursor: pointer;" 
+                              data-bs-toggle="modal" data-bs-target="#aiInsightsModal" onclick="showAIInsights()">
+                            <i class="fas fa-robot me-1"></i>AI: Initializing
+                        </span>
                         <div class="form-check form-switch d-inline-block">
                             <input class="form-check-input" type="checkbox" id="thirdSundayToggle">
                             <label class="form-check-label text-white" for="thirdSundayToggle">
@@ -380,6 +384,37 @@
                 </div>
                 <div class="modal-body">
                     <input type="file" class="form-control" id="jsonFileInput" accept=".json" onchange="handleJSONUpload(event)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Insights Modal -->
+    <div class="modal fade" id="aiInsightsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-robot me-2"></i>
+                        AI System Insights
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="aiInsightsContent">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading AI insights...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="refreshAIInsights()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
                 </div>
             </div>
         </div>
