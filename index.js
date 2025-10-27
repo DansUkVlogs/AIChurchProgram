@@ -18,7 +18,7 @@ import {
     getAIStatus,
     getAIInsights
 } from './js/autoFill.js';
-import { exportToPDF, exportToJSON, importFromJSON } from './js/export.js';
+import { exportToPDF, exportToJSON, importFromJSON, migrateSavedCameraInfo } from './js/export.js';
 import { 
     editField, 
     saveField, 
@@ -69,8 +69,22 @@ window.showAIInsights = function() {
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async function() {
     // Show the third Sunday modal on startup
-    const thirdSundayModal = new bootstrap.Modal(document.getElementById('thirdSundayModal'));
-    thirdSundayModal.show();
+    const thirdSundayEl = document.getElementById('thirdSundayModal');
+    // Create modal with explicit options to match markup
+    const thirdSundayModal = new bootstrap.Modal(thirdSundayEl, { backdrop: 'static', keyboard: false });
+
+    // Accessibility: ensure nothing inside the modal is focused while aria-hidden may be true during show transition.
+    // Blur any currently focused element before showing the modal, then show after a very short delay so
+    // Bootstrap can update aria-hidden/state before focus moves into the modal.
+    try {
+        const active = document.activeElement;
+        if (active && typeof active.blur === 'function') active.blur();
+    } catch (e) {
+        console.warn('[Main] Could not blur active element before showing modal:', e);
+    }
+
+    // Small delay to avoid race between focus and aria-hidden toggling in assistive tech
+    setTimeout(() => thirdSundayModal.show(), 30);
     
     // Initialize theme
     initializeTheme();
@@ -80,6 +94,65 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Set up event listeners
     setupEventListeners();
+
+    // Global accessibility helpers for Bootstrap modals
+    // Ensure no focused element remains inside an element that will be aria-hidden during modal show.
+    try {
+        // Before any modal is shown, blur the current active element to avoid focus being hidden
+        document.addEventListener('show.bs.modal', function(evt) {
+            try {
+                const active = document.activeElement;
+                if (active && typeof active.blur === 'function') {
+                    active.blur();
+                }
+            } catch (e) {
+                // swallow errors - accessibility best-effort
+            }
+        }, true);
+
+        // After modal is fully shown, move focus into the modal for keyboard users
+        document.addEventListener('shown.bs.modal', function(evt) {
+            try {
+                const modalEl = evt.target;
+                // Find first focusable element inside modal
+                const focusable = modalEl.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+                if (focusable && focusable.length > 0) {
+                    focusable[0].focus();
+                } else if (modalEl && typeof modalEl.focus === 'function') {
+                    modalEl.focus();
+                }
+            } catch (e) {
+                // ignore
+            }
+        }, true);
+    } catch (e) {
+        console.warn('[Main] Could not attach global modal accessibility handlers:', e);
+    }
+
+    // Robust cleanup: sometimes Bootstrap backdrop can remain if modals are closed rapidly or nested.
+    // Ensure leftover backdrops are removed and body state restored when any modal is hidden.
+    try {
+        document.addEventListener('hidden.bs.modal', function(evt) {
+            // Small delay to let Bootstrap finish its own cleanup
+            setTimeout(() => {
+                try {
+                    const anyOpen = document.querySelectorAll('.modal.show').length > 0;
+                    if (!anyOpen) {
+                        // Remove leftover backdrop elements
+                        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+                        // Ensure body classes/styles are restored
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                    }
+                } catch (e) {
+                    console.warn('[Main] modal cleanup failed:', e);
+                }
+            }, 40);
+        }, true);
+    } catch (e) {
+        console.warn('[Main] Could not attach modal cleanup handler:', e);
+    }
     
     // Set up keyboard shortcuts
     setupKeyboardShortcuts([
@@ -237,6 +310,13 @@ async function processProgram() {
         // Hide loading spinner
         hideLoadingSpinner();
 
+        // Update AI status indicator after processing so any prediction errors are reflected
+        try {
+            updateAIStatusIndicator(getAIStatus());
+        } catch (e) {
+            console.warn('[Main] Could not update AI status indicator after processing:', e);
+        }
+
         // Handle missing information
         if (missingItems.length > 0) {
             currentMissingIndex = 0;
@@ -250,6 +330,7 @@ async function processProgram() {
         hideLoadingSpinner();
         console.error('Error processing program:', error);
         showAlert('Error processing program: ' + error.message, 'danger');
+        try { updateAIStatusIndicator(getAIStatus()); } catch (e) {}
     }
 }
 
@@ -286,7 +367,17 @@ function showMissingInfoModal() {
                     <div class="selection-tile ${item.camera === '4' || (item.camera && item.camera.includes('4')) ? 'selected' : ''}" 
                          data-value="4" onclick="toggleModalTile(this, 'camera')">4</div>
                 </div>
+                <!-- Camera 2 sub-options (1-9 and 0) -->
+                <div class="mt-2" id="modalCameraSubsContainer" style="display: none;">
+                    <small class="text-muted">Camera 2 presets (select one or more)</small>
+                    <div class="tile-container mt-1" id="modalCameraSubs">
+                        ${[1,2,3,4,5,6,7,8,9,'0'].map(n => `
+                            <div class="selection-tile" data-value="${n}" onclick="toggleModalSubTile(this)">${n}</div>
+                        `).join('')}
+                    </div>
+                </div>
                 <input type="hidden" id="modalCamera" value="${item.camera || ''}">
+                <input type="hidden" id="modalCameraSubsValue" value="">
             </div>
             
             <div class="col-md-3 mb-3">
@@ -331,6 +422,48 @@ function showMissingInfoModal() {
         </div>
     `;
 
+    // After inserting modal HTML, initialize Camera 2 sub-selection if present in existing value
+    try {
+        const camStr = (item.camera || '').trim();
+        const mainInput = document.getElementById('modalCamera');
+        const subsInput = document.getElementById('modalCameraSubsValue');
+        const subsContainer = document.getElementById('modalCameraSubsContainer');
+
+        if (camStr) {
+            // Parse camera parts like "2 (6/7) / 4" or "2(6/7)/4"
+            const parts = camStr.split('/').map(p => p.trim());
+            const primaries = [];
+            let subsVal = '';
+            parts.forEach(p => {
+                const m = p.match(/^(\d+)\s*(?:\(([^)]+)\))?$/);
+                if (m) {
+                    primaries.push(m[1]);
+                    if (m[1] === '2' && m[2]) subsVal = m[2].trim();
+                }
+            });
+
+            if (primaries.length > 0) {
+                // Compose normalized main value
+                const composed = primaries.map(v => (v === '2' && subsVal) ? `2 (${subsVal})` : v).join(' / ');
+                if (mainInput) mainInput.value = composed;
+            }
+
+            // If there are subs for camera 2, show the subs container and select tiles
+            if (subsVal && subsContainer) {
+                subsContainer.style.display = 'block';
+                if (subsInput) subsInput.value = subsVal;
+                const subsArr = subsVal.split('/').map(s => s.trim());
+                const subsTiles = document.querySelectorAll('#modalCameraSubs .selection-tile');
+                subsTiles.forEach(t => {
+                    if (subsArr.includes(String(t.dataset.value))) t.classList.add('selected');
+                    else t.classList.remove('selected');
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[Modal Init] Could not initialize camera subs:', e);
+    }
+
     const modal = new bootstrap.Modal(document.getElementById('missingInfoModal'));
     modal.show();
 }
@@ -360,6 +493,9 @@ function saveMissingInfo() {
     const modal = bootstrap.Modal.getInstance(document.getElementById('missingInfoModal'));
     if (modal) modal.hide();
     
+    // Update AI status in case any changes triggered AI learning/errors
+    try { updateAIStatusIndicator(getAIStatus()); } catch (e) {}
+
     currentMissingIndex++;
     
     setTimeout(() => {
@@ -369,6 +505,7 @@ function saveMissingInfo() {
 
 // Toggle tile selection in modal
 function toggleModalTile(tile, fieldType) {
+    console.log('[Modal] toggleModalTile', fieldType, tile && tile.dataset && tile.dataset.value);
     const container = tile.parentElement;
     const hiddenInput = document.getElementById(`modal${fieldType.charAt(0).toUpperCase() + fieldType.slice(1)}`);
     
@@ -382,7 +519,40 @@ function toggleModalTile(tile, fieldType) {
         // Sort values to maintain consistent order (1,2,3,4)
         values.sort((a, b) => parseInt(a) - parseInt(b));
         
-        hiddenInput.value = values.length > 1 ? values.join('/') : (values[0] || '');
+        // If there are camera 2 sub-options selected, include them in parentheses
+        const subsInput = document.getElementById('modalCameraSubsValue');
+        const subs = subsInput ? (subsInput.value || '') : '';
+
+        // Compose camera value preserving order and adding subs for camera '2'
+        const composed = values.map(v => {
+            if (v === '2' && subs) return `2 (${subs.replace(/\//g, '/').replace(/\s+/g,'')})`;
+            return v;
+        }).join(' / ');
+
+    hiddenInput.value = composed;
+    console.log('[Modal] camera composed value:', composed, 'subs:', subs);
+
+        // Show or hide the subs container depending on whether camera '2' is selected
+        const subsContainer = document.getElementById('modalCameraSubsContainer');
+        if (values.includes('2')) {
+            if (subsContainer) subsContainer.style.display = 'block';
+            // Pre-select any subs that are already present in the hidden subs input
+            if (subs) {
+                const subsTiles = document.querySelectorAll('#modalCameraSubs .selection-tile');
+                const subsArr = subs.split('/').map(s => s.trim());
+                subsTiles.forEach(t => {
+                    if (subsArr.includes(String(t.dataset.value))) t.classList.add('selected');
+                    else t.classList.remove('selected');
+                });
+            }
+        } else {
+            if (subsContainer) subsContainer.style.display = 'none';
+            // Clear subs when camera 2 is no longer selected
+            if (subsInput) subsInput.value = '';
+            const subsTiles = document.querySelectorAll('#modalCameraSubs .selection-tile');
+            subsTiles.forEach(t => t.classList.remove('selected'));
+            console.log('[Modal] camera 2 not selected - cleared subs');
+        }
     } else if (fieldType === 'scene') {
         // Scene supports multi-select
         tile.classList.toggle('selected');
@@ -396,6 +566,40 @@ function toggleModalTile(tile, fieldType) {
         hiddenInput.value = values.length > 1 ? values.join('/') : (values[0] || '');
     }
 }
+
+// Toggle a Camera 2 sub-option tile (1-9,0)
+function toggleModalSubTile(tile) {
+    tile.classList.toggle('selected');
+    console.log('[Modal] toggleModalSubTile clicked', tile.dataset && tile.dataset.value);
+
+    const subsTiles = document.querySelectorAll('#modalCameraSubs .selection-tile.selected');
+    const values = Array.from(subsTiles).map(t => String(t.dataset.value));
+    // Sort numerically with '0' as 0 at end? We'll sort with numeric parse where '0' becomes 0
+    values.sort((a,b) => {
+        const na = parseInt(a, 10);
+        const nb = parseInt(b, 10);
+        return na - nb;
+    });
+
+    const subsInput = document.getElementById('modalCameraSubsValue');
+    if (subsInput) subsInput.value = values.join('/');
+    console.log('[Modal] subs selected now:', subsInput ? subsInput.value : values.join('/'));
+
+    // Update the main camera hidden value to reflect subs
+    const hiddenInput = document.getElementById('modalCamera');
+    const container = document.getElementById('modalCameraTiles');
+    const selectedTiles = container.querySelectorAll('.selection-tile.selected');
+    const primaries = Array.from(selectedTiles).map(t => t.dataset.value);
+    primaries.sort((a,b) => parseInt(a)-parseInt(b));
+
+    const composed = primaries.map(v => v === '2' && subsInput && subsInput.value ? `2 (${subsInput.value})` : v).join(' / ');
+    if (hiddenInput) hiddenInput.value = composed;
+    console.log('[Modal] updated main camera hidden value to:', composed);
+}
+
+// Expose sub-tile toggle to global scope for inline onclick handlers
+try { window.toggleModalSubTile = toggleModalSubTile; } catch (e) {}
+try { window.toggleModalTile = toggleModalTile; } catch (e) {}
 
 // Display results table
 function displayResults() {
@@ -423,7 +627,7 @@ function displayResults() {
                 <span class="badge bg-primary editable-field" data-field="camera" data-index="${index}" onclick="window.editField(${index}, 'camera')">${item.camera}</span>
             </td>
             <td>
-                <span class="badge bg-secondary editable-field" data-field="scene" data-index="${index}" onclick="window.editField(${index}, 'scene')">${item.scene}</span>
+                <span class="badge badge-scene editable-field" data-field="scene" data-index="${index}" onclick="window.editField(${index}, 'scene')">${item.scene}</span>
             </td>
             <td>
                 <span class="badge bg-success editable-field" data-field="mic" data-index="${index}" onclick="window.editField(${index}, 'mic')">${item.mic}</span>
@@ -513,13 +717,17 @@ function updateAIStatusIndicator(aiStatus) {
             };
             
             const phaseName = phaseNames[aiStatus.currentPhase] || 'Active';
-            statusElement.innerHTML = `<i class="fas fa-robot me-1"></i>AI: ${phaseName}`;
-            statusElement.className = 'badge bg-success me-2';
-            
-            // Add tooltip with more details
-            statusElement.title = `AI System Active - Phase: ${aiStatus.currentPhase}
-Total Predictions: ${aiStatus.performance?.totalPredictions || 0}
-Accuracy: ${((aiStatus.performance?.overallAccuracy || 0) * 100).toFixed(1)}%`;
+            // If AI has recent prediction errors, show warning badge instead
+            if (aiStatus.hasError) {
+                statusElement.innerHTML = `<i class="fas fa-robot me-1"></i>AI: ${phaseName} (errors)`;
+                statusElement.className = 'badge bg-danger me-2';
+                statusElement.title = `AI System Active (errors detected) - Phase: ${aiStatus.currentPhase}\nLast error: ${aiStatus.lastErrorMessage || 'unknown'}`;
+            } else {
+                statusElement.innerHTML = `<i class="fas fa-robot me-1"></i>AI: ${phaseName}`;
+                statusElement.className = 'badge bg-success me-2';
+                // Add tooltip with more details
+                statusElement.title = `AI System Active - Phase: ${aiStatus.currentPhase}\nTotal Predictions: ${aiStatus.performance?.totalPredictions || 0}\nAccuracy: ${((aiStatus.performance?.overallAccuracy || 0) * 100).toFixed(1)}%`;
+            }
         } else {
             statusElement.innerHTML = '<i class="fas fa-robot me-1"></i>AI: Starting';
             statusElement.className = 'badge bg-warning me-2';
@@ -527,6 +735,23 @@ Accuracy: ${((aiStatus.performance?.overallAccuracy || 0) * 100).toFixed(1)}%`;
         }
     }
 }
+
+// Expose helper to window so you can refresh the AI status badge from the console
+try { window.updateAIStatusIndicator = updateAIStatusIndicator; } catch (e) { /* ignore */ }
+
+// Expose migration helper so user can migrate loaded program data in-memory
+try {
+    window.migrateSavedCameraInfo = function() {
+        try {
+            migrateSavedCameraInfo(programData);
+            displayResults();
+            showAlert('Migrated camera info for current program data', 'success');
+        } catch (e) {
+            console.error('Migration failed:', e);
+            showAlert('Migration failed: ' + e.message, 'danger');
+        }
+    };
+} catch (e) {}
 
 // Refresh AI insights
 window.refreshAIInsights = function() {
@@ -559,6 +784,119 @@ window.refreshAIInsights = function() {
         `;
     }
 };
+
+// Wire up AI Saving toggle in the AI Insights modal
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const aiToggle = document.getElementById('aiSavingToggle');
+        const applyBtn = document.getElementById('applyAISavingBtn');
+
+        const current = localStorage.getItem('ai_saving_enabled');
+        if (aiToggle) aiToggle.checked = (current === null ? true : current === 'true');
+
+        if (applyBtn) {
+            applyBtn.addEventListener('click', function() {
+                const enabled = aiToggle ? aiToggle.checked : true;
+                localStorage.setItem('ai_saving_enabled', String(enabled));
+                showAlert('AI saving ' + (enabled ? 'enabled' : 'disabled'), 'info');
+            });
+        }
+    } catch (e) {
+        console.warn('[Main] Could not initialize AI saving toggle:', e);
+    }
+
+    // Wire up clear training confirm button
+    try {
+        const confirmBtn = document.getElementById('confirmClearTrainingBtn');
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', async function() {
+                const pwdInput = document.getElementById('clearTrainingPassword');
+                const status = document.getElementById('clearTrainingStatus');
+                if (!pwdInput) return;
+                // Trim whitespace to avoid accidental mismatches
+                const pwd = (pwdInput.value || '').toString().trim();
+
+                if (!pwd) {
+                    if (status) status.innerText = 'Please enter the admin password';
+                    showAlert('Please enter the admin password to confirm', 'warning');
+                    return;
+                }
+
+                // Pre-check password against the expected value (default or stored override) to provide clearer UX
+                let expected = 'admin123';
+                try {
+                    const stored = localStorage.getItem('admin_password');
+                    if (stored && stored.toString().trim()) expected = stored.toString().trim();
+                } catch (e) {
+                    // ignore
+                }
+
+                if (pwd !== expected) {
+                    // If mismatch, provide a clearer hint and do not call the destructive API
+                    if (status) status.innerText = 'Invalid admin password (does not match stored password)';
+                    showAlert('Invalid admin password. If you previously set a custom admin password, remove it or use that password.', 'danger');
+                    return;
+                }
+
+                status.innerText = 'Clearing...';
+                confirmBtn.disabled = true;
+                try {
+                    const module = await import('./js/ai-database.js');
+                    await module.clearAllTrainingData(pwd);
+                    status.innerText = 'Training data cleared successfully.';
+                    showAlert('Training data cleared successfully', 'success');
+                    // clear password field for security
+                    try { pwdInput.value = ''; } catch (e) {}
+
+                    // close both modals after short delay
+                    setTimeout(() => {
+                        const clearModal = bootstrap.Modal.getInstance(document.getElementById('clearTrainingModal'));
+                        if (clearModal) clearModal.hide();
+                        const helpModal = bootstrap.Modal.getInstance(document.getElementById('helpModal'));
+                        if (helpModal) helpModal.hide();
+                    }, 800);
+                } catch (err) {
+                    console.error('Clear training failed:', err);
+                    const msg = (err && err.message) ? err.message : 'Failed to clear training data';
+                    // Provide clearer messaging for invalid password
+                    if (msg === 'Invalid password') {
+                        status.innerText = 'Invalid admin password';
+                        showAlert('Invalid admin password', 'danger');
+                    } else {
+                        status.innerText = 'Error: ' + msg;
+                        showAlert('Clear failed: ' + msg, 'danger');
+                    }
+                } finally {
+                    confirmBtn.disabled = false;
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('[Main] Could not wire clear training button:', e);
+    }
+
+    // Show a helpful hint when the Clear Training modal is shown (default dev password or stored override)
+    try {
+        const clearModalEl = document.getElementById('clearTrainingModal');
+        if (clearModalEl) {
+            clearModalEl.addEventListener('show.bs.modal', function() {
+                const hintEl = document.getElementById('clearTrainingHint');
+                try {
+                    const stored = localStorage.getItem('admin_password');
+                    if (stored && stored.toString().trim()) {
+                        if (hintEl) hintEl.innerHTML = '<small class="text-muted">A custom admin password is stored locally. Use that password to confirm.</small>';
+                    } else {
+                        if (hintEl) hintEl.innerHTML = '<small class="text-muted">Enter admin password to confirm</small>';
+                    }
+                } catch (err) {
+                    if (hintEl) hintEl.innerHTML = '<small class="text-muted">Enter admin password to confirm</small>';
+                }
+            });
+        }
+    } catch (e) {
+        console.warn('[Main] Could not attach clear modal hint handler:', e);
+    }
+});
 
 // Generate HTML for AI insights
 function generateAIInsightsHTML(aiStatus, aiInsights) {
@@ -615,13 +953,13 @@ function generateAIInsightsHTML(aiStatus, aiInsights) {
                         <div class="mb-2">
                             <small class="text-muted">Next: ${requirements.nextPhase || 'Complete'}</small>
                         </div>
-                        ${progress.percentage !== undefined ? `
+                        ${ (typeof progress.percentage === 'number' && isFinite(progress.percentage)) ? `
                             <div class="progress mb-2">
                                 <div class="progress-bar" role="progressbar" 
-                                     style="width: ${progress.percentage}%" 
-                                     aria-valuenow="${progress.percentage}" 
+                                     style="width: ${Math.max(0, Math.min(100, progress.percentage))}%" 
+                                     aria-valuenow="${Math.max(0, Math.min(100, progress.percentage))}" 
                                      aria-valuemin="0" aria-valuemax="100">
-                                    ${progress.percentage.toFixed(0)}%
+                                    ${Number.isFinite(progress.percentage) ? progress.percentage.toFixed(0) : '0'}%
                                 </div>
                             </div>
                             <small class="text-muted">
@@ -731,3 +1069,4 @@ window.saveRowEditWithLearning = async function(index) {
     
     return result;
 };
+

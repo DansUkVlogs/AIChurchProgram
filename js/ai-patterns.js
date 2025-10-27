@@ -20,6 +20,44 @@ export class AIPatterns {
         }
     }
 
+    /**
+     * Compatibility wrapper used by AILearning.predictPatternBased.
+     * Loads stored patterns and returns an array of matching pattern objects
+     * with a `techValues` property (backwards-compatible shape).
+     * If there are no stored patterns, returns an empty array.
+     * @param {Object|string} programItem
+     * @param {string} field
+     */
+    async findMatchingPatterns(programItem, field) {
+        try {
+            const stored = await this.loadPatterns();
+            if (!stored || stored.length === 0) return [];
+
+            // Normalize the input text for matching - support programItem objects with title
+            const inputText = (programItem && (programItem.title || programItem.programItem)) ? (programItem.title || programItem.programItem) : ('' + programItem);
+
+            // Use existing class matcher to find similar patterns
+            const rawMatches = this.findSimilarPatterns(inputText, stored, false);
+
+            // Map stored examples to the shape AILearning expects: { techValues: {...}, ... }
+            const mapped = rawMatches.map(match => {
+                const example = match.example || match; // tolerance for shapes
+                // stored patterns may keep user values in `userValues` or `techValues`
+                const techValues = example.userValues || example.techValues || {};
+                return Object.assign({}, example, {
+                    similarity: match.similarity || {},
+                    weight: match.weight || 0,
+                    techValues: techValues
+                });
+            });
+
+            return mapped;
+        } catch (error) {
+            console.error('❌ Error in findMatchingPatterns compatibility wrapper:', error);
+            return [];
+        }
+    }
+
     // Main function to find similar patterns in learning data
     findSimilarPatterns(programItem, learningData, isThirdSunday) {
     const startTime = performance.now();

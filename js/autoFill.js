@@ -214,7 +214,8 @@ function detectByItemType(parsedInfo, isThirdSunday) {
             case 'band':
                 return { camera: '2', scene: '1', mic: 'Amb', stream: '1', notes: '' };
             case 'piano':
-                return { camera: '3', scene: '1', mic: 'Amb', stream: '1', notes: '' };
+                // Piano uses Camera 2 with close presets 2/3
+                return { camera: '2 (2/3)', scene: '1', mic: 'Amb', stream: '1', notes: '' };
             case 'handheld':
                 return { camera: '3', scene: '2', mic: 'Handheld', stream: '2', notes: '' };
             case 'lectern':
@@ -384,6 +385,46 @@ function applyAIPredictions(item, aiPredictions) {
             console.log(`[Auto-Fill] Applied AI prediction for ${field}: "${prediction.value}" (confidence: ${confidence.toFixed(2)})`);
         }
     });
+
+    // Post-process camera field: if camera is '2' (or includes primary '2' without subs), try to augment with sensible subs
+    try {
+        if (item.camera) {
+            const camStr = String(item.camera);
+            // Detect if there is a plain '2' primary without parentheses like '2' or '2 / 1' or '1 / 2'
+            const has2WithParen = /2\s*\(/.test(camStr);
+            const has2Primary = camStr.split('/').map(p => p.trim()).some(p => /^2(?!\s*\()/.test(p));
+            if (has2Primary && !has2WithParen) {
+                // Decide sensible subs based on program text
+                const parsed = parseItemText(item.programItem || '');
+                let subs = '';
+
+                const lower = (item.programItem || '').toLowerCase();
+                if (parsed.performer === 'wg' || parsed.performer === 'worship group' || lower.includes('wg') || lower.includes('worship group')) {
+                    subs = '6';
+                } else if (parsed.performer === 'band' || lower.includes('band')) {
+                    subs = '1';
+                } else if (lower.includes('yp') || lower.includes('youth')) {
+                    subs = '5';
+                } else if (lower.includes('benediction') || lower.includes('closing')) {
+                    subs = '0';
+                } else if (lower.includes('piano')) {
+                    // Prefer close-up presets 2 and 3 for piano performances
+                    subs = '2/3';
+                }
+
+                if (subs) {
+                    // Replace any primary '2' tokens with '2 (subs)'
+                    const parts = camStr.split('/').map(p => p.trim()).map(p => {
+                        return (/^2(?!\s*\()/.test(p)) ? `2 (${subs})` : p;
+                    });
+                    item.camera = parts.join(' / ');
+                    console.log('[Auto-Fill] Augmented camera 2 with subs ->', item.camera);
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[Auto-Fill] Could not augment camera subs:', e);
+    }
 }
 
 // Learn from user corrections (called when user edits fields)
@@ -415,11 +456,14 @@ export function getAIStatus() {
             status: 'Not initialized'
         };
     }
-    
-    return {
+    // Include last error flag so UI can surface prediction issues
+    const baseStatus = aiLearning.getSystemStatus() || {};
+    return Object.assign({
         isAvailable: true,
-        ...aiLearning.getSystemStatus()
-    };
+        hasError: !!aiLearning.lastError,
+        lastErrorMessage: aiLearning.lastError ? (aiLearning.lastError.message || String(aiLearning.lastError)) : null,
+        lastErrorAt: aiLearning.lastErrorAt || null
+    }, baseStatus);
 }
 
 // Get AI insights for debugging/display
@@ -435,4 +479,3 @@ export function getAIInsights() {
 export function getAILearning() {
     return aiLearning;
 }
-

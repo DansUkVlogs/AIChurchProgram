@@ -260,6 +260,8 @@ export class AILearning {
                 }
             } catch (error) {
                 console.error(`[AI Learning] Error predicting ${field}:`, error);
+                // Record last error for diagnostics/status reporting
+                try { this.lastError = error; this.lastErrorAt = Date.now(); } catch (e) {}
                 predictions[field] = {
                     value: '',
                     confidence: 0,

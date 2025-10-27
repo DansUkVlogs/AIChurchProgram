@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Program Smart Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <!-- Initial 3rd Sunday Popup -->
+    <div class="modal fade" id="thirdSundayModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        Service Information
+                    </h5>
+                </div>
+                <div class="modal-body text-center">
+                    <p class="mb-3">Is this the 3rd Sunday?</p>
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <button type="button" class="btn btn-success btn-lg me-md-2" onclick="setThirdSunday(true)">
+                            <i class="fas fa-check me-2"></i>Yes
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-lg" onclick="setThirdSunday(false)">
+                            <i class="fas fa-times me-2"></i>No
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Missing Info Modal -->
+    <div class="modal fade" id="missingInfoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Complete Information
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div id="missingInfoContent">
+                        <!-- Dynamic content will be inserted here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="saveMissingInfo()">
+                        <i class="fas fa-save me-2"></i>Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container-fluid">
+        <!-- Header -->
+        <header class="row bg-primary text-white py-3 mb-4">
+            <div class="col">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h1 class="h3 mb-0">
+                            <i class="fas fa-church me-2"></i>
+                            Church Program Smart Assistant
+                        </h1>
+                        <small class="opacity-75">Auto-fill tech settings for your service</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-light btn-sm me-2" onclick="toggleTheme()">
+                            <i class="fas fa-moon" id="themeIcon"></i>
+                        </button>
+                        <button class="btn btn-info btn-sm me-2" data-bs-toggle="modal" data-bs-target="#helpModal">
+                            <i class="fas fa-question-circle me-1"></i>Help
+                        </button>
+                        <span id="aiStatus" class="badge bg-secondary me-2" style="display: none; cursor: pointer;" 
+                              data-bs-toggle="modal" data-bs-target="#aiInsightsModal" onclick="showAIInsights()">
+                            <i class="fas fa-robot me-1"></i>AI: Initializing
+                        </span>
+                        <div class="form-check form-switch d-inline-block">
+                            <input class="form-check-input" type="checkbox" id="thirdSundayToggle">
+                            <label class="form-check-label text-white" for="thirdSundayToggle">
+                                3rd Sunday
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Input Section -->
+        <div class="row mb-4">
+            <div class="col-lg-8 mx-auto">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-upload me-2"></i>
+                            Input Program
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="fileInput" class="form-label">Upload Program File (.txt)</label>
+                            <input type="file" class="form-control" id="fileInput" accept=".txt" onchange="handleFileUpload(event)">
+                        </div>
+                        <div class="mb-3">
+                            <label for="programText" class="form-label">Or paste program items (one per line, max 20 lines)</label>
+                            <textarea class="form-control" id="programText" rows="20" maxlength="2000" placeholder="Example:&#10;SASB 123 Band&#10;Bible Reading - John 3:16&#10;Message&#10;Offering"></textarea>
+                            <div class="form-text">Maximum 20 lines allowed</div>
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex">
+                            <button class="btn btn-success me-md-2" onclick="processProgram()">
+                                <i class="fas fa-magic me-2"></i>Process Program
+                            </button>
+                            <button class="btn btn-outline-primary me-md-2" onclick="loadExample()">
+                                <i class="fas fa-eye me-2"></i>Load Example
+                            </button>
+                            <button class="btn btn-outline-secondary me-md-2" onclick="clearInput()">
+                                <i class="fas fa-trash me-2"></i>Clear
+                            </button>
+                            <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#loadJSONModal">
+                                <i class="fas fa-upload me-2"></i>Load JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Results Section -->
+        <div class="row" id="resultsSection" style="display: none;">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-table me-2"></i>
+                            Program Schedule
+                        </h5>
+                        <div>
+                            <button class="btn btn-outline-success btn-sm me-2" onclick="addNewRow()">
+                                <i class="fas fa-plus me-2"></i>Add Item
+                            </button>
+                            <button class="btn btn-outline-primary btn-sm me-2" onclick="saveAsJSON()">
+                                <i class="fas fa-download me-2"></i>Save JSON
+                            </button>
+                            <button class="btn btn-danger btn-sm" onclick="exportToPDF()">
+                                <i class="fas fa-file-pdf me-2"></i>Export PDF
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="programTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th style="width: 28%">Program Item</th>
+                                        <th style="width: 9%">Camera</th>
+                                        <th style="width: 9%">Scene</th>
+                                        <th style="width: 11%">Mic</th>
+                                        <th style="width: 13%">Stream</th>
+                                        <th style="width: 20%">Notes</th>
+                                        <th style="width: 10%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="programTableBody">
+                                    <!-- Dynamic content will be inserted here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Church Program Smart Assistant - Help Guide
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="accordion" id="helpAccordion">
+                        <!-- Overview Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="overviewHeading">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#overviewCollapse">
+                                    <i class="fas fa-info-circle me-2"></i>Overview
+                                </button>
+                            </h2>
+                            <div id="overviewCollapse" class="accordion-collapse collapse show" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p>The Church Program Smart Assistant automatically fills in technical settings for your church service program items. Simply paste your program, and it will detect song types, readings, messages, and other items to suggest appropriate camera, scene, microphone, and streaming settings.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Camera Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="cameraHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cameraCollapse">
+                                    <i class="fas fa-video me-2 text-primary"></i>Camera
+                                </button>
+                            </h2>
+                            <div id="cameraCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Camera</strong> refers to which camera position/angle will be used during each program item:</p>
+                                        <ul>
+                                            <li><strong>Camera 1:</strong> The Screen Output - shows presentation screens, lyrics, announcements</li>
+                                            <li><strong>Camera 2:</strong> PTZ Camera - used for most items; supports presets for different positions throughout the meeting (use the Camera 2 presets to target band, piano, worship group, etc.)</li>
+                                            <li><strong>Camera 3:</strong> Roaming Camera - used for activities not covered by other cameras; flexible positioning</li>
+                                            <li><strong>Camera 4:</strong> Lectern Camera - positioned at lectern/pulpit; can be repositioned when lectern isn't used
+                                                <br><em>Note: Provide clear positioning instructions to the team when first using Camera 4 in non-lectern setup</em></li>
+                                        </ul>
+                                    <p>Multiple cameras can be selected (e.g., "2/1" means use Camera 2 primarily, Camera 1 as backup).</p>
+                                    <div class="mt-3">
+                                        <h6>Camera 2 Preset Positions</h6>
+                                        <p>When <strong>Camera 2</strong> is selected you can choose one or more preset positions (shown as numbers). These correspond to specific music/room areas:</p>
+                                        <ul>
+                                            <li><strong>1</strong> — Band (general band mix)</li>
+                                            <li><strong>2</strong> — Floor Piano</li>
+                                            <li><strong>3</strong> — Stage Piano</li>
+                                            <li><strong>4</strong> — Lectern (secondary use when repositioned)</li>
+                                            <li><strong>5</strong> — Main Floor</li>
+                                            <li><strong>6</strong> — Worship Group (WG)</li>
+                                            <li><strong>7</strong> — Band Left</li>
+                                            <li><strong>8</strong> — Band Center</li>
+                                            <li><strong>9</strong> — Band Right</li>
+                                            <li><strong>0</strong> — Full Hall (wide/overview)</li>
+                                        </ul>
+                                        <p class="small text-muted">Example: <code>2 (1/8)</code> means Camera 2 with presets Band and Band Center selected.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scene Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="sceneHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#sceneCollapse">
+                                    <i class="fas fa-desktop me-2 text-secondary"></i>Scene
+                                </button>
+                            </h2>
+                            <div id="sceneCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Scene</strong> determines the visual layout and graphics overlay for the live stream:</p>
+                                    <ul>
+                                        <li><strong>Scene 1:</strong> Main Scene - camera as the main output with support for lower thirds for songs and bible readings, used for almost everything</li>
+                                        <li><strong>Scene 2:</strong> Screen Primary - main screen output is large, camera output is small in the corner</li>
+                                        <li><strong>Scene 3:</strong> Camera Primary - camera is the large output, screen is the small output in the corner (reverse of Scene 2)</li>
+                                    </ul>
+                                    <p>Scene selection affects the visual layout that viewers see on the live stream and any recordings.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Microphone Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="micHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#micCollapse">
+                                    <i class="fas fa-microphone me-2 text-success"></i>Microphone
+                                </button>
+                            </h2>
+                            <div id="micCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Microphone</strong> specifies which audio input will be used:</p>
+                                    <ul>
+                                        <li><strong>Lectern:</strong> Fixed microphone at the lectern/pulpit</li>
+                                        <li><strong>Handheld:</strong> Wireless handheld microphone</li>
+                                        <li><strong>Headset:</strong> Wireless headset microphone</li>
+                                        <li><strong>Amb:</strong> Ambient/room microphones for general pickup</li>
+                                        <li><strong>AV:</strong> Audio/Video system input (for videos, presentations)</li>
+                                        <li><strong>2,3,4:</strong> Specific numbered microphones (e.g., for band members)</li>
+                                    </ul>
+                                    <p>Multiple mics can be used (e.g., "2,3,4" for a worship group with three mics).</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Stream Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="streamHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#streamCollapse">
+                                    <i class="fas fa-broadcast-tower me-2 text-info"></i>Stream
+                                </button>
+                            </h2>
+                            <div id="streamCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Stream</strong> indicates which Stream Deck button to press for live streaming:</p>
+                                    <ul>
+                                        <li><strong>1:</strong> "Go Live + YouTube" - Streams to both church platform and YouTube simultaneously</li>
+                                        <li><strong>2:</strong> "Go Live" - Streams only to the main church platform</li>
+                                    </ul>
+                                    <p><strong>When to use each:</strong></p>
+                                    <ul>
+                                        <li><strong>Use "1" (Go Live + YouTube) for:</strong> Song Lyrics and Bible readings - not for other content
+                                        <li><strong>Use "2" (Go Live only) for:</strong> Everything else - announcements, prayers, messages, testimonies, general service items</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="notesHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#notesCollapse">
+                                    <i class="fas fa-sticky-note me-2 text-warning"></i>Notes
+                                </button>
+                            </h2>
+                            <div id="notesCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>Notes</strong> field is for additional information or reminders:</p>
+                                    <ul>
+                                        <li>Special instructions for tech team</li>
+                                        <li>Timing notes</li>
+                                        <li>Equipment requirements</li>
+                                        <li>Any other relevant details</li>
+                                    </ul>
+                                    <p>This field is optional and will appear in the exported PDF for reference.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3rd Sunday Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="thirdSundayHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#thirdSundayCollapse">
+                                    <i class="fas fa-calendar-alt me-2 text-primary"></i>3rd Sunday Mode
+                                </button>
+                            </h2>
+                            <div id="thirdSundayCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>3rd Sunday</strong> mode adjusts settings for special third Sunday services:</p>
+                                    <ul>
+                                        <li>Bible readings may use different camera positions (Camera 2 instead of 4)</li>
+                                        <li>Youth activities may use handheld mics instead of headsets</li>
+                                        <li>Different microphone assignments for some activities</li>
+                                    </ul>
+                                    <p>Toggle this on if your service is on the third Sunday of the month and follows special procedures.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Usage Tips Section -->
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="tipsHeading">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#tipsCollapse">
+                                    <i class="fas fa-lightbulb me-2 text-warning"></i>Usage Tips
+                                </button>
+                            </h2>
+                            <div id="tipsCollapse" class="accordion-collapse collapse" data-bs-parent="#helpAccordion">
+                                <div class="accordion-body">
+                                    <p><strong>For best results:</strong></p>
+                                    <ul>
+                                        <li>Include performer names (e.g., "SASB 123 Band", "SOF 456 WG")</li>
+                                        <li>Specify song numbers when available</li>
+                                        <li>Use consistent naming (Band, WG, Piano, etc.)</li>
+                                        <li>One program item per line</li>
+                                        <li>Maximum 20 lines per program</li>
+                                    </ul>
+                                    <p><strong>Auto-detection works for:</strong></p>
+                                    <ul>
+                                        <li>SASB/SOF songs with numbers</li>
+                                        <li>Bible readings</li>
+                                        <li>Messages/sermons</li>
+                                        <li>Prayers</li>
+                                        <li>Announcements</li>
+                                        <li>YP spots</li>
+                                        <li>Band, WG, Piano performances</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#clearTrainingModal">
+                        <i class="fas fa-exclamation-triangle me-1"></i>Clear AI Training Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Clear Training Data Modal -->
+    <div class="modal fade" id="clearTrainingModal" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="fas fa-trash me-2"></i>Clear Training Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-danger">This will permanently delete the AI training data from Firebase and local storage. This action cannot be undone.</p>
+                    <!-- Wrap password input in a lightweight form to avoid the console warning about inputs outside a form -->
+                    <form class="mb-2" id="clearTrainingForm" onsubmit="event.preventDefault();">
+                        <label for="clearTrainingPassword" class="form-label">Enter admin password to confirm</label>
+                        <input type="password" id="clearTrainingPassword" class="form-control" placeholder="Password" autocomplete="one-time-code">
+                    </form>
+                    <div>
+                        <div id="clearTrainingHint" class="form-text text-muted mt-1">Enter admin password to confirm</div>
+                    </div>
+                    <div id="clearTrainingStatus" class="small text-muted mt-2"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmClearTrainingBtn">
+                        <i class="fas fa-trash me-1"></i>Clear Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JSON Modal -->
+    <div class="modal fade" id="loadJSONModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Load Saved Program</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="file" class="form-control" id="jsonFileInput" accept=".json" onchange="handleJSONUpload(event)">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Insights Modal -->
+    <div class="modal fade" id="aiInsightsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-robot me-2"></i>
+                        AI System Insights
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="aiInsightsContent">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading AI insights...</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <div class="me-auto d-flex align-items-center">
+                        <div class="form-check form-switch me-3">
+                            <input class="form-check-input" type="checkbox" id="aiSavingToggle">
+                            <label class="form-check-label" for="aiSavingToggle">Enable AI Saving</label>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" id="applyAISavingBtn">Apply</button>
+                    </div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="refreshAIInsights()">
+                        <i class="fas fa-sync-alt me-1"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script>
+        // Add line count validation to textarea
+        document.addEventListener('DOMContentLoaded', function() {
+            const programText = document.getElementById('programText');
+            if (programText) {
+                programText.addEventListener('input', function(e) {
+                    const lines = e.target.value.split('\n');
+                    if (lines.length > 20) {
+                        // Remove extra lines beyond 20
+                        const limitedLines = lines.slice(0, 20);
+                        e.target.value = limitedLines.join('\n');
+                        // Show warning
+                        const existingAlert = document.querySelector('.line-limit-alert');
+                        if (!existingAlert) {
+                            const alert = document.createElement('div');
+                            alert.className = 'alert alert-warning line-limit-alert mt-2';
+                            alert.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>Maximum 20 lines allowed. Extra lines have been removed.';
+                            e.target.parentNode.appendChild(alert);
+                            setTimeout(() => alert.remove(), 3000);
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+    <script type="module" src="index.js"></script>
+</body>
+</html>

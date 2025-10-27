@@ -255,28 +255,51 @@ export class AIStatistics {
      */
     generateDetailedReport() {
         const performance = this.getSystemPerformance();
-        
-        return {
-            systemOverview: {
-                totalPredictions: performance.totalPredictions,
-                overallAccuracy: (performance.overallAccuracy * 100).toFixed(1) + '%',
-                recentAccuracy: (performance.recentAccuracy * 100).toFixed(1) + '%',
-                trend: performance.trend
-            },
-            fieldBreakdown: Object.keys(this.fieldStatistics).map(field => ({
+        // Defensive formatting: ensure numeric values exist before calling toFixed
+        const safePercent = (v) => {
+            const num = Number(v);
+            return Number.isFinite(num) ? (num * 100).toFixed(1) + '%' : '0.0%';
+        };
+
+        const safeNumber = (v, digits = 2) => {
+            const num = Number(v);
+            return Number.isFinite(num) ? num.toFixed(digits) : Number(0).toFixed(digits);
+        };
+
+        const overview = {
+            totalPredictions: performance.totalPredictions || 0,
+            overallAccuracy: safePercent(performance.overallAccuracy || 0),
+            recentAccuracy: safePercent(performance.recentAccuracy || 0),
+            trend: performance.trend || 'unknown'
+        };
+
+        const breakdown = Object.keys(this.fieldStatistics).map(field => {
+            const stats = this.fieldStatistics[field] || {};
+            const acc = Number(stats.accuracy) || 0;
+            const totalPreds = stats.totalPredictions || 0;
+            const recommended = this.getRecommendedThreshold(field);
+
+            return {
                 field: field,
-                accuracy: (this.fieldStatistics[field].accuracy * 100).toFixed(1) + '%',
-                totalPredictions: this.fieldStatistics[field].totalPredictions,
-                recommendedThreshold: this.getRecommendedThreshold(field).toFixed(2),
+                accuracy: (Number.isFinite(acc) ? (acc * 100).toFixed(1) + '%' : '0.0%'),
+                totalPredictions: totalPreds,
+                recommendedThreshold: safeNumber(recommended, 2),
                 topValues: this.getTopValues(field, 3)
-            })),
-            recentPerformance: this.accuracyHistory.slice(-10).map(entry => ({
-                field: entry.field,
-                predicted: entry.predicted,
-                actual: entry.actual,
-                correct: entry.correct,
-                confidence: entry.confidence.toFixed(2)
-            }))
+            };
+        });
+
+        const recentPerformance = this.accuracyHistory.slice(-10).map(entry => ({
+            field: entry.field,
+            predicted: entry.predicted,
+            actual: entry.actual,
+            correct: !!entry.correct,
+            confidence: safeNumber(entry.confidence || 0, 2)
+        }));
+
+        return {
+            systemOverview: overview,
+            fieldBreakdown: breakdown,
+            recentPerformance: recentPerformance
         };
     }
 
@@ -290,12 +313,16 @@ export class AIStatistics {
         const fieldStats = this.fieldStatistics[field];
         if (!fieldStats || !fieldStats.commonValues) return [];
 
+        const total = fieldStats.totalPredictions || 0;
         const values = Object.entries(fieldStats.commonValues)
-            .map(([value, count]) => ({
-                value: value,
-                count: count,
-                percentage: ((count / fieldStats.totalPredictions) * 100).toFixed(1) + '%'
-            }))
+            .map(([value, count]) => {
+                const pct = (total > 0) ? ((count / total) * 100) : 0;
+                return {
+                    value: value,
+                    count: count,
+                    percentage: Number.isFinite(pct) ? pct.toFixed(1) + '%' : '0.0%'
+                };
+            })
             .sort((a, b) => b.count - a.count)
             .slice(0, limit);
 
@@ -366,11 +393,28 @@ export class AIStatistics {
      */
     async loadStatistics() {
         try {
+            // Ensure database is initialized (retry) so we can read from Firebase if available
+            try {
+                if (typeof this.database.initialize === 'function') {
+                    await this.database.initialize();
+                }
+            } catch (initErr) {
+                console.warn('[AI Stats] Database initialize retry failed:', initErr);
+            }
+
             const data = await this.database.loadData('statistics');
             if (data) {
                 this.fieldStatistics = data.fieldStatistics || this.fieldStatistics;
                 this.accuracyHistory = data.accuracyHistory || [];
                 console.log('[AI Stats] Statistics loaded from database');
+            } else {
+                // If no data loaded, attempt diagnostics to help the user understand why
+                try {
+                    const status = this.database.getStatus ? this.database.getStatus() : null;
+                    console.warn('[AI Stats] No statistics found - database status:', status);
+                } catch (diagErr) {
+                    console.warn('[AI Stats] No statistics and could not get DB status:', diagErr);
+                }
             }
         } catch (error) {
             console.error('[AI Stats] Error loading statistics:', error);

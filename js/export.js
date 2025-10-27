@@ -1,6 +1,7 @@
 // Export functionality for the Church Program Smart Assistant
 
 import { CONFIG } from './config.js';
+import { AUTO_FILL_RULES } from './config.js';
 import { showAlert, showLoadingSpinner, hideLoadingSpinner, downloadFile, formatDate } from './utils.js';
 import { getAILearning } from './autoFill.js';
 
@@ -11,7 +12,9 @@ export async function exportToPDF(programData, isThirdSunday) {
         return;
     }
 
-    showLoadingSpinner();
+    // Do not show the global loading spinner here. We render a single export overlay
+    // with its own spinner and progress bar so users only see one control.
+    try { const existingSpinner = document.getElementById('loadingSpinner'); if (existingSpinner) existingSpinner.remove(); } catch (e) {}
 
     try {
         // Create PDF content
@@ -21,7 +24,9 @@ export async function exportToPDF(programData, isThirdSunday) {
         // Define colors for different fields
         const colors = {
             camera: { r: 0, g: 123, b: 255 },     // Blue (matches bg-primary)
-            scene: { r: 108, g: 117, b: 125 },    // Gray (matches bg-secondary)  
+            // Use a distinct, colorful hue for Scene rather than neutral gray so it
+            // stands out in the exported PDF (rounded rectangle below).
+            scene: { r: 108, g: 48, b: 237 },     // Purple-ish (was gray)
             mic: { r: 25, g: 135, b: 84 },        // Green (matches bg-success)
             stream: { r: 13, g: 202, b: 240 },    // Cyan (matches bg-info)
             notes: { r: 255, g: 193, b: 7 }       // Yellow (matches bg-warning)
@@ -71,16 +76,16 @@ export async function exportToPDF(programData, isThirdSunday) {
         doc.setFont(undefined, 'bold');
         doc.text('Legend:', 12, 35);
         
-        // Camera legend (circle)
-        doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
-        doc.circle(30, 33, 2, 'F');
-        doc.setTextColor(0, 0, 0);
-        doc.text('Camera', 35, 35);
+    // Camera legend (dark blue rounded rectangle)
+    doc.setFillColor(19, 59, 102); // dark blue
+    doc.roundedRect(28, 31, 4, 4, 0.6, 0.6, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Camera', 35, 35);
         
-        // Scene legend (rectangle)
-        doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
-        doc.rect(62, 31, 4, 4, 'F');
-        doc.text('Scene', 68, 35);
+    // Scene legend (rounded rectangle with distinct color)
+    doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
+    doc.roundedRect(62, 31, 4, 4, 0.6, 0.6, 'F');
+    doc.text('Scene', 68, 35);
         
         // Mic legend (rounded rectangle - changed from triangle)
         doc.setFillColor(colors.mic.r, colors.mic.g, colors.mic.b);
@@ -126,8 +131,27 @@ export async function exportToPDF(programData, isThirdSunday) {
         doc.setFont(undefined, 'normal');
         doc.setFontSize(fontSize);
         let yPosition = headerY + 18; // Start below the info line
-        
-        programData.forEach((item, index) => {
+
+        // Create a centered export progress overlay so users can see percent progress
+        const exportOverlay = document.createElement('div');
+        exportOverlay.id = 'exportProgressOverlay';
+        exportOverlay.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:1060;';
+        exportOverlay.innerHTML = `
+            <div style="background:rgba(0,0,0,0.65);color:#fff;padding:14px 18px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:auto;min-width:220px;">
+                <div style="display:flex;align-items:center;gap:12px;width:100%;justify-content:center;">
+                    <div class="spinner-border spinner-border-sm text-light" role="status" style="width:1.25rem;height:1.25rem"><span class="visually-hidden">Loading...</span></div>
+                    <div id="exportPercentText" style="font-weight:700;font-size:18px;min-width:48px;text-align:center;">0%</div>
+                </div>
+                <div style="width:100%;background:rgba(255,255,255,0.12);height:8px;border-radius:6px;overflow:hidden;">
+                    <div id="exportProgressBarFill" style="width:0%;height:100%;background:linear-gradient(90deg,#0d6efd,#6dd5fa);transition:width 180ms linear;"></div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(exportOverlay);
+
+        // Iterate with an async loop so we can yield the event loop and let the browser repaint
+        for (let index = 0; index < programData.length; index++) {
+            const item = programData[index];
             // Calculate vertical center for all elements first
             const rowCenterY = yPosition + (maxRowHeight / 2);
             
@@ -205,38 +229,46 @@ export async function exportToPDF(programData, isThirdSunday) {
             // Reset font size for other elements
             doc.setFontSize(fontSize);
             
-            // Camera with circle shape - constrained sizing to always fit
+            // Camera with dark rounded-rectangle shape - constrained sizing to always fit
             const cameraX = 77;
             const cameraY = rowCenterY;
-            const cameraRadius = Math.min(shapeSize * 1.0, maxRowHeight * 0.25); // Constrain to row height
-            doc.setFillColor(colors.camera.r, colors.camera.g, colors.camera.b);
-            doc.circle(cameraX, cameraY, cameraRadius, 'F');
-            
-            // Camera text - slightly increased font size for better readability
+            // Make exported camera wider to match the mic width so it appears as a dark-blue
+            // rounded rectangle roughly the same width as the green mic box.
+            // Use the same sizing constraints as micWidth (but keep independent variable name)
+            const cameraWidth = Math.min(shapeSize * 4.0, 25); // Wider, matches mic width limits
+            const cameraHeight = Math.min(shapeSize * 1.8, maxRowHeight * 0.4); // Constrain to row height
+            const camRectX = cameraX - (cameraWidth / 2);
+            const camRectY = cameraY - (cameraHeight / 2);
+            doc.setFillColor(19, 59, 102); // dark blue
+            // Use a slightly larger corner radius to match the mic/stream rounded look
+            doc.roundedRect(camRectX, camRectY, cameraWidth, cameraHeight, 1.5, 1.5, 'F');
+
+            // Camera text - center inside rectangle
             doc.setTextColor(255, 255, 255);
             doc.setFont(undefined, 'bold');
             let cameraText = item.camera;
-            let cameraFontSize = Math.min(fontSize + 5, cameraRadius * 2.2); // Slightly increased
+            let cameraFontSize = Math.min(fontSize + 5, cameraHeight * 1.1);
             doc.setFontSize(cameraFontSize);
-            
-            // Make font smaller until text fits in circle
-            const maxCameraWidth = cameraRadius * 1.4;
+
+            // Make font smaller until text fits in rectangle
+            const maxCameraWidth = cameraWidth - 4;
             while (doc.getTextWidth(cameraText) > maxCameraWidth && cameraFontSize > 6) {
                 cameraFontSize--;
                 doc.setFontSize(cameraFontSize);
             }
-            
-            // Center text perfectly in circle with proper vertical alignment
+
+            // Center text in rectangle
             const cameraTextWidth = doc.getTextWidth(cameraText);
-            doc.text(cameraText, cameraX - (cameraTextWidth / 2), cameraY + (cameraFontSize * 0.25));
+            doc.text(cameraText, camRectX + (cameraWidth / 2) - (cameraTextWidth / 2), camRectY + (cameraHeight / 2) + (cameraFontSize * 0.25));
             
-            // Scene with rectangle shape - constrained sizing to always fit
+            // Scene with rounded-rectangle shape - constrained sizing to always fit
             const sceneX = 95;
             const sceneY = rowCenterY - (Math.min(shapeSize * 1.0, maxRowHeight * 0.2));
             const sceneWidth = Math.min(shapeSize * 2.5, 15); // Constrain maximum width
             const sceneHeight = Math.min(shapeSize * 2.0, maxRowHeight * 0.4); // Constrain to row height
             doc.setFillColor(colors.scene.r, colors.scene.g, colors.scene.b);
-            doc.rect(sceneX, sceneY, sceneWidth, sceneHeight, 'F');
+            // Rounded corners for consistency with other boxes
+            doc.roundedRect(sceneX, sceneY, sceneWidth, sceneHeight, 1.5, 1.5, 'F');
             
             // Scene text - significantly increased font size to match camera
             doc.setTextColor(255, 255, 255);
@@ -384,18 +416,36 @@ export async function exportToPDF(programData, isThirdSunday) {
             doc.setFont(undefined, 'normal');
             doc.setFontSize(fontSize);
             yPosition += maxRowHeight;
-        });
+
+            // Update progress overlay percent and yield briefly to allow repaint
+            try {
+                const percent = Math.round(((index + 1) / programData.length) * 100);
+                const pctEl = document.getElementById('exportPercentText');
+                const fillEl = document.getElementById('exportProgressBarFill');
+                if (pctEl) pctEl.textContent = `${percent}%`;
+                if (fillEl) fillEl.style.width = `${percent}%`;
+            } catch (e) {
+                // ignore DOM update errors
+            }
+
+            // Small yield to allow UI to update (especially important on mobile)
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
         
         // AI Learning: User exported PDF - learn from all final configurations
         await learnFromPDFExport(programData, isThirdSunday);
         
-        // Save the PDF
-        doc.save(CONFIG.PDF_FILENAME);
-        hideLoadingSpinner();
-        showAlert('PDF exported successfully!', 'success');
+    // Remove the export overlay and hide spinner and give the browser a short moment to update the UI before starting download
+    try { const ol = document.getElementById('exportProgressOverlay'); if (ol) ol.remove(); } catch (e) {}
+    hideLoadingSpinner();
+    // Small yield so mobile browsers can show download UI / allow UI thread to update
+    await new Promise(resolve => setTimeout(resolve, 120));
+    // Save the PDF (may trigger browser download prompt)
+    doc.save(CONFIG.PDF_FILENAME);
+    showAlert('PDF exported successfully!', 'success');
         
     } catch (error) {
-        hideLoadingSpinner();
+        try { const ol = document.getElementById('exportProgressOverlay'); if (ol) ol.remove(); } catch (e) {}
         showAlert('Error exporting PDF: ' + error.message, 'danger');
         console.error('PDF export error:', error);
     }
@@ -485,6 +535,12 @@ export function importFromJSON(jsonData) {
                 stream: item.techSettings?.stream || '',
                 notes: item.notes || ''
             }));
+            // Migrate legacy/saved camera info to new composed formats where applicable
+            try {
+                migrateSavedCameraInfo(programData);
+            } catch (e) {
+                console.warn('[Import] Camera migration failed:', e);
+            }
         }
         // Handle legacy format
         else if (data.programData && data.isThirdSunday !== undefined) {
@@ -530,6 +586,93 @@ function validateJSONStructure(data) {
     }
     
     return false;
+}
+
+// Migrate saved camera/mic info to new composed camera formats based on rules
+function migrateSavedCameraInfo(programData) {
+    if (!Array.isArray(programData)) return;
+
+    const lcContains = (text, key) => (text || '').toLowerCase().includes((key || '').toLowerCase());
+    const anyContains = (text, keys) => keys.some(k => lcContains(text, k));
+
+    function cameraHasPrimary(cameraStr, primary) {
+        if (!cameraStr) return false;
+        const parts = cameraStr.split('/').map(p => p.trim());
+        return parts.some(p => p === String(primary) || p.startsWith(String(primary) + ' ' ) || p.startsWith(String(primary) + '(') || p.startsWith(String(primary) + ' ('));
+    }
+
+    function composeWithSubs(primaries, subs) {
+        // primaries: array of primary values (strings), subs: string like '6/7' or ''
+        const out = primaries.map(p => {
+            if (p === '2' && subs) return `2 (${subs})`;
+            return p;
+        });
+        return out.join(' / ');
+    }
+
+    programData.forEach(item => {
+        try {
+            const text = (item.programItem || '').toLowerCase();
+            const mic = (item.mic || '').toLowerCase();
+            const cam = (item.camera || '').toString();
+
+            // 1) Lectern + camera 4 -> keep 4 and add 2(4) as secondary
+            if ((mic.includes('lectern') || mic.includes('lecturn')) && cameraHasPrimary(cam, '4')) {
+                // ensure we don't duplicate
+                if (!cameraHasPrimary(cam, '2')) {
+                    item.camera = composeWithSubs(['4','2'], '4');
+                } else if (!/\(\s*4\s*\)/.test(cam)) {
+                    // if 2 exists but without subs, add 4 as subs
+                    // collect primaries (keep order: 4 then 2)
+                    item.camera = composeWithSubs(['4','2'], '4');
+                }
+                return; // mapping applied
+            }
+
+            // 2) YP Spot -> 2 (5)
+            if (text.includes('yp spot') || text.includes('yp') || text.includes('youth') || text.includes('y p')) {
+                item.camera = '2 (5)';
+                return;
+            }
+
+            // 3) Benediction -> 2 (0)
+            if (anyContains(text, ['benediction', 'closing prayer', 'closing'])) {
+                item.camera = '2 (0)';
+                return;
+            }
+
+            // 4) Piano -> 2 (2/3)
+            if (text.includes('piano') || mic.includes('piano')) {
+                item.camera = '2 (2/3)';
+                return;
+            }
+
+            // 5) Band Message -> 2 (1/7/8/9)
+            if (text.includes('band') && anyContains(text, ['message', 'band message'])) {
+                item.camera = '2 (1/7/8/9)';
+                return;
+            }
+
+            // 6) Band that was 2 before -> 2 (1)
+            // Map band items to 2 (1) when they previously used camera 2 or when camera is empty but the item is clearly a band
+            if (text.includes('band')) {
+                if (cameraHasPrimary(cam, '2') || (!cam || cam.trim() === '')) {
+                    item.camera = '2 (1)';
+                    return;
+                }
+            }
+
+            // 7) WG that used to be 2 -> 2 (6)
+            if ((text.includes('wg') || text.includes('worship group') || text.includes('worship')) && cameraHasPrimary(cam, '2')) {
+                item.camera = '2 (6)';
+                return;
+            }
+
+            // default: leave unchanged
+        } catch (e) {
+            console.warn('[Migration] error migrating item:', item, e);
+        }
+    });
 }
 
 // Export summary statistics
@@ -632,3 +775,5 @@ async function learnFromPDFExport(programData, isThirdSunday) {
     }
 }
 
+// Export migration helper so other modules (like main) can call it on runtime data
+export { migrateSavedCameraInfo };

@@ -119,6 +119,16 @@ export class AIDatabase {
      * Save data with automatic Firebase/localStorage fallback
      */
     async saveData(key, data) {
+        // Respect global AI saving toggle. If disabled, skip saving entirely.
+        try {
+            const savingEnabled = localStorage.getItem('ai_saving_enabled');
+            if (savingEnabled !== null && savingEnabled === 'false') {
+                console.log(`🚫 AI saving disabled - skipping save for ${key}`);
+                return false;
+            }
+        } catch (e) {
+            // ignore localStorage read errors and continue
+        }
         try {
             const timestamp = new Date().toISOString();
             const dataWithMeta = {
@@ -378,6 +388,75 @@ export class AIDatabase {
 
         return diagnosis;
     }
+}
+
+/**
+ * Clear all training data from Firebase and localStorage
+ * WARNING: This is a destructive operation. Caller must supply the admin password.
+ * @param {string} password
+ */
+export async function clearAllTrainingData(password) {
+    // Accept trimmed password and allow an optional override password stored in localStorage for convenience.
+    const ADMIN_PASSWORD_DEFAULT = 'admin123';
+    const supplied = (password || '').toString().trim();
+
+    let expected = ADMIN_PASSWORD_DEFAULT;
+    try {
+        const stored = localStorage.getItem('admin_password');
+        if (stored && stored.toString().trim()) expected = stored.toString().trim();
+    } catch (e) {
+        // ignore localStorage read errors
+    }
+
+    if (supplied !== expected) {
+        throw new Error('Invalid password');
+    }
+
+    // Initialize DB if needed
+    await initializeDatabase();
+
+    // Delete all documents in 'ai_data' collection if online
+    try {
+        if (isFirebaseInitialized && db) {
+            const snapshot = await db.collection('ai_data').get();
+            if (!snapshot.empty) {
+                // Firestore batch delete (max 500 per batch)
+                let batch = db.batch();
+                let opCount = 0;
+                snapshot.forEach(doc => {
+                    batch.delete(db.collection('ai_data').doc(doc.id));
+                    opCount++;
+                    if (opCount >= 400) {
+                        // Commit batch and start new one to avoid limits
+                        batch.commit();
+                        batch = db.batch();
+                        opCount = 0;
+                    }
+                });
+                await batch.commit();
+                console.log('🗑️ Cleared Firebase ai_data collection');
+            } else {
+                console.log('ℹ️ No documents found in ai_data collection');
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error clearing Firebase data:', error);
+        throw error;
+    }
+
+    // Clear localStorage keys used by AI
+    try {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('ai_') || key === 'ai_patterns' || key === 'ai_saving_enabled') {
+                localStorage.removeItem(key);
+            }
+        });
+        console.log('🗑️ Cleared AI-related localStorage keys');
+    } catch (e) {
+        console.warn('⚠️ Could not clear some localStorage keys:', e);
+    }
+
+    return true;
 }
 
 // Make diagnosis available globally for testing

@@ -335,6 +335,59 @@ header {
     border-color: #2980b9;
 }
 
+/* Camera sub-presets keypad grid (1-9, 0 centered) */
+/* Applies to inline subs and modal subs containers */
+[id^="inlineCameraSubsTiles-"],
+#editRowCameraSubs,
+#newRowCameraSubs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(2.6rem, 1fr));
+    gap: 0.5rem;
+    justify-items: center;
+    align-items: center;
+}
+
+[id^="inlineCameraSubsTiles-"] .selection-tile,
+#editRowCameraSubs .selection-tile,
+#newRowCameraSubs .selection-tile {
+    min-width: 2.6rem;
+    min-height: 2.6rem;
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+}
+
+/* Center the '0' (which is the 10th tile) in the bottom row */
+[id^="inlineCameraSubsTiles-"] .selection-tile:nth-child(10),
+#editRowCameraSubs .selection-tile:nth-child(10),
+#newRowCameraSubs .selection-tile:nth-child(10) {
+    grid-column: 2;
+}
+
+/* Also style the modal Camera 2 subs container the same way */
+
+/* Ensure modal subs container uses the keypad grid */
+#modalCameraSubs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(2.6rem, 1fr));
+    gap: 0.5rem;
+    justify-items: center;
+    align-items: center;
+}
+
+#modalCameraSubs .selection-tile {
+    min-width: 2.6rem;
+    min-height: 2.6rem;
+    padding: 0.4rem;
+    border-radius: 0.5rem;
+    font-size: 0.95rem;
+}
+
+/* Center the 0 tile in modal subs (10th child) */
+#modalCameraSubs .selection-tile:nth-child(10) {
+    grid-column: 2;
+}
+
 /* Dark theme tile styling */
 [data-theme="dark"] .selection-tile {
     background-color: var(--dark-bg);
@@ -778,4 +831,24 @@ header {
     .accordion-body li {
         margin-bottom: 0.375rem;
     }
+}
+
+/* Scene badge styling used in the program table to indicate selected scene */
+.badge-scene {
+    background-color: rgb(108, 48, 237); /* purple-ish to match PDF scene color */
+    color: #fff;
+    border-radius: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    display: inline-block;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .badge-scene {
+    background-color: rgb(88, 38, 197);
+    color: #fff;
+}
+
+.badge-scene.text-muted {
+    opacity: 0.85;
+    color: rgba(255,255,255,0.85);
 }

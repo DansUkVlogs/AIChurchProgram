@@ -31,9 +31,11 @@ export const CONFIG = {
 export const AUTO_FILL_RULES = {
     songs: {
         keywords: ['sasb', 'sof', 'song', 'hymn', 'chorus', 'worship'],
-        default: { camera: '2', scene: '1', mic: 'Amb', notes: '' },
-        wg: { camera: '2', scene: '1', mic: '2,3,4', notes: '' },
-        piano: { camera: '3', scene: '1', mic: 'Amb', notes: '' }
+        // Default to Camera 2 with sensible sub-presets for performers
+        default: { camera: '2 (1)', scene: '1', mic: 'Amb', notes: '' },
+        wg: { camera: '2 (6)', scene: '1', mic: '2,3,4', notes: '' },
+    // Piano performances should use Camera 2 with close-presets 2/3
+    piano: { camera: '2 (2/3)', scene: '1', mic: 'Amb', notes: '' }
     },
     
     offering: {
@@ -71,7 +73,8 @@ export const AUTO_FILL_RULES = {
     
     band: {
         keywords: ['band'],
-        default: { camera: '2', scene: '1', mic: 'Amb', notes: '' }
+        // Band performances prefer Camera 2 with main-band preset (1)
+        default: { camera: '2 (1)', scene: '1', mic: 'Amb', notes: '' }
     },
     
     benediction: {
